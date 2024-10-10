@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   Delete,
   Query,
@@ -38,11 +37,27 @@ export class TicketController {
 
   @Get('/summaries')
   async summaries(
-    @Query('commercesId', new ParseJsonPipe<string[]>(Array)) commercesId: string[],
-    @Query('region') region: string,
-    @Query('technicalId') technicalId: string,
+    @Query('commercesId', new ParseJsonPipe<string[]>(Array))
+    commercesId: string[],
+    @Query('technicalsId', new ParseJsonPipe<string[]>(Array))
+    technicalsId: string[],
+    @Query('regions', new ParseJsonPipe<string[]>(Array))
+    regions: string[],
+    @Query('startDate')
+    startDate: Date,
+    @Query('endDate')
+    endDate: Date,
+    @Query('ticketNumber')
+    ticketNumber: string,
   ) {
-    return await this.ticketService.getSummary(commercesId, region, technicalId);
+    return await this.ticketService.getSummary(
+      commercesId,
+      regions,
+      technicalsId,
+      startDate,
+      endDate,
+      ticketNumber,
+    );
   }
 
   @Get(':id')

@@ -14,6 +14,7 @@ import { Evidence } from 'src/evidence/dto/create-evidence.dto';
 import { Comment } from 'src/comment/dto/create-comment.dto';
 
 interface TransformedTicket {
+  id: string;
   ticketNumber: string;
   date: string;
   region: string;
@@ -573,8 +574,11 @@ export class TicketService {
 
   async getSummary(
     commercesId?: string[],
-    region?: string,
-    technicalId?: string,
+    regions?: string[],
+    technicalsId?: string[],
+    startDate?: Date,
+    endDate?: Date,
+    ticketNumber?: string,
   ) {
     const filters: any = {};
 
@@ -583,19 +587,39 @@ export class TicketService {
       filters.commerceId = commercesId;
     }
 
+    // Solo agrega el filtro de comercio si commercesId tiene un valor
+    if (technicalsId && technicalsId.length > 0) {
+      filters['technicals.id'] = technicalsId;
+    }
+
     let { records: tickets } = await this.listFlows(0, 1000000, {
       filters: filters,
       sort: { createdAt: 'desc' },
+      search: { ticket_number:                                   ticketNumber },
     });
 
-    if (region != null && technicalId != null) {
-      tickets = tickets.filter(
-        (record) =>
-          record.branch.location.region == region &&
-          record.technicals.some(
-            (technical: { id: string; enabled: any }) =>
-              technical.id === technicalId && technical.enabled,
+    if (technicalsId?.length) {
+      tickets = tickets
+        .map((ticket) => ({
+          ...ticket,
+          technicals: ticket.technicals.filter(
+            (tech) => tech.enabled && technicalsId.includes(tech.id),
           ),
+        }))
+        .filter((ticket) => ticket.technicals.length > 0);
+    }
+
+    if (regions && regions.length > 0) {
+      tickets = tickets.filter((ticket) =>
+        regions.includes(ticket.branch.location.region),
+      );
+    }
+
+    if (startDate && endDate) {
+      tickets = tickets.filter(
+        (ticket) =>
+          ticket.ticket.createdAt >= startDate &&
+          ticket.ticket.createdAt <= endDate,
       );
     }
 
@@ -603,36 +627,45 @@ export class TicketService {
 
     const ticketsByStatus = this.transformTicketsByStatus(tickets);
 
+    let formattedTechnicals = null;
+    if (technicalsId?.length > 0) {
+      const technicals = tickets.flatMap((ticket) =>
+        ticket.technicals
+          .filter((tech) => technicalsId.includes(tech.id) && tech.enabled) // Filtra por ID y habilitados
+          .map((tech) => ({
+            id: tech.id,
+            name: tech.fullName,
+          })),
+      );
+
+      const uniqueTechnicals = technicals.filter(
+        (tech, index, self) =>
+          index === self.findIndex((t) => t.id === tech.id), // Mantiene solo el primer encontrado
+      );
+
+      formattedTechnicals = uniqueTechnicals.map((tech) => ({
+        id: tech.id,
+        name: tech.name,
+      }));
+    }
+
     const filtersSummary = {
-      clients: commercesId?.map((id) => {
-        const ticket = tickets.find((tick) => tick.commerce.id === id);
-        return {
-          id: ticket.commerce.id,
-          name: ticket.commerce.name,
-        };
-      }) || [null],
-      regions: [
-        region
-          ? {
+      clients:
+        commercesId?.map((id) => {
+          const ticket = tickets.find((tick) => tick.commerce.id === id);
+          return {
+            id: ticket.commerce.id,
+            name: ticket.commerce.name,
+          };
+        }) || null,
+      regions: regions
+        ? regions.map((region) => {
+            return {
               name: region,
-            }
-          : null,
-      ],
-      technicals: [
-        tickets
-          .map((ticket) => {
-            const data = ticket.technicals.find(
-              (tech) => tech.id === technicalId,
-            );
-            return (
-              data && {
-                id: data.id,
-                name: data.fullName,
-              }
-            );
+            };
           })
-          .find((tech) => tech !== undefined),
-      ],
+        : null,
+      technicals: formattedTechnicals,
     };
 
     const newTickets = tickets.map((ticket) => ticket.ticket);
@@ -646,10 +679,10 @@ export class TicketService {
     );
 
     const totalTickets = tickets.length;
-    const countByAttentionType =
-      ticketStatuses['Cerrado'] + ticketStatuses['Resuelto'];
 
-    const rateClosed = Math.round((countByAttentionType / totalTickets * 100));
+    const countByAttentionType = ticketStatuses['Cerrado'] || 0;
+
+    const rateClosed = Math.round((countByAttentionType / totalTickets) * 100);
     const rateOpen = 100 - rateClosed;
 
     const closedVsPending = {
@@ -673,6 +706,7 @@ export class TicketService {
 
     tickets.forEach((ticket) => {
       const transformedTicket: TransformedTicket = {
+        id: ticket.ticket.id,
         ticketNumber: ticket.ticket.ticket_number,
         date: new Date(ticket.ticket.plannedDate).toISOString().split('T')[0],
         region: ticket.branch.location.region,
