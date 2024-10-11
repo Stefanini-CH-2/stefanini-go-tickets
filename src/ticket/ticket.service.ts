@@ -595,7 +595,7 @@ export class TicketService {
     let { records: tickets } = await this.listFlows(0, 1000000, {
       filters: filters,
       sort: { createdAt: 'desc' },
-      search: { ticket_number:                                   ticketNumber },
+      search: { ticket_number: ticketNumber },
     });
 
     if (technicalsId?.length) {
@@ -627,45 +627,38 @@ export class TicketService {
 
     const ticketsByStatus = this.transformTicketsByStatus(tickets);
 
-    let formattedTechnicals = null;
-    if (technicalsId?.length > 0) {
-      const technicals = tickets.flatMap((ticket) =>
-        ticket.technicals
-          .filter((tech) => technicalsId.includes(tech.id) && tech.enabled) // Filtra por ID y habilitados
-          .map((tech) => ({
-            id: tech.id,
-            name: tech.fullName,
-          })),
-      );
+    const uniqueCommercesMap = new Map();
+    const uniqueTechnicalsMap = new Map();
 
-      const uniqueTechnicals = technicals.filter(
-        (tech, index, self) =>
-          index === self.findIndex((t) => t.id === tech.id), // Mantiene solo el primer encontrado
-      );
+    tickets.forEach((ticket) => {
+      const commerce = ticket.commerce;
+      console.log(commerce)
+      uniqueCommercesMap.set(commerce.id, commerce.name);
+    });
 
-      formattedTechnicals = uniqueTechnicals.map((tech) => ({
-        id: tech.id,
-        name: tech.name,
-      }));
-    }
+    tickets.forEach((ticket) => {
+      const technicals = ticket.technicals;
+      technicals.forEach((technical) => {
+        uniqueTechnicalsMap.set(technical.id, technical.fullName);
+      });
+    });
+
+    const clients = Array.from(uniqueCommercesMap, ([id, name]) => ({
+      id,
+      name,
+    }));
+
+    const technicals = Array.from(uniqueTechnicalsMap, ([id,name]) => ({ 
+      id,
+      name
+    }));
 
     const filtersSummary = {
-      clients:
-        commercesId?.map((id) => {
-          const ticket = tickets.find((tick) => tick.commerce.id === id);
-          return {
-            id: ticket.commerce.id,
-            name: ticket.commerce.name,
-          };
-        }) || null,
-      regions: regions
-        ? regions.map((region) => {
-            return {
-              name: region,
-            };
-          })
-        : null,
-      technicals: formattedTechnicals,
+      clients: clients,
+      regions: [
+        ...new Set(tickets.map((ticket) => ticket.branch.location.region)),
+      ].map((region) => ({ name: region })),
+      technicals: technicals,
     };
 
     const newTickets = tickets.map((ticket) => ticket.ticket);
