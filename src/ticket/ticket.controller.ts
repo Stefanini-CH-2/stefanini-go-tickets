@@ -17,6 +17,7 @@ import {
   QueryExclude,
   QueryFilters,
   QueryParams,
+  QuerySearch,
   QuerySort,
 } from 'stefaninigo';
 import { ParseJsonPipe } from 'src/pipes/json.pipe';
@@ -78,6 +79,8 @@ export class TicketController {
     exclude: QueryExclude,
     @Query('fields', new ParseJsonPipe<string[]>(Array)) fields: string[],
     @Query('sort', new ParseJsonPipe<QuerySort>(QuerySort)) sort: QuerySort,
+    @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
+    search: QuerySearch,
   ) {
     try {
       const queryParams: QueryParams = {
@@ -85,6 +88,7 @@ export class TicketController {
         exclude,
         fields,
         sort,
+        search
       };
       const response = await this.ticketService.list(start, limit, queryParams);
       response.records = Utils.mapRecord(Ticket, response.records);
@@ -132,6 +136,8 @@ export class TicketController {
     exclude: QueryExclude,
     @Query('fields', new ParseJsonPipe<string[]>(Array)) fields: string[],
     @Query('sort', new ParseJsonPipe<QuerySort>(QuerySort)) sort: QuerySort,
+    @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
+    search: QuerySearch,
   ) {
     try {
       const queryParams: QueryParams = {
@@ -139,6 +145,7 @@ export class TicketController {
         exclude,
         fields,
         sort,
+        search,
       };
       return await this.ticketService.listFlows(start, limit, queryParams);
     } catch (error) {

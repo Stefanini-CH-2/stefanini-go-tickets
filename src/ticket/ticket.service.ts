@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Ticket } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { DatabaseService, QueryParams } from 'stefaninigo';
+import { DatabaseService, QueryParams, QuerySearch } from 'stefaninigo';
 import { v4 as uuidv4 } from 'uuid';
 import { StatesHistory } from 'src/states_history/dto/create-states-history.dto';
 import { Utils } from 'src/utils/utils';
@@ -114,7 +114,11 @@ export class TicketService {
     };
   }
 
-  async listFlows(page: number, limit: number, queryParams: QueryParams) {
+  async listFlows(
+    page: number,
+    limit: number,
+    queryParams: QueryParams,
+  ) {
     page = Math.max(page, 1);
     const start = (page - 1) * limit;
     const total = await this.databaseService.count(
@@ -632,7 +636,6 @@ export class TicketService {
 
     tickets.forEach((ticket) => {
       const commerce = ticket.commerce;
-      console.log(commerce)
       uniqueCommercesMap.set(commerce.id, commerce.name);
     });
 
@@ -648,9 +651,9 @@ export class TicketService {
       name,
     }));
 
-    const technicals = Array.from(uniqueTechnicalsMap, ([id,name]) => ({ 
+    const technicals = Array.from(uniqueTechnicalsMap, ([id, name]) => ({
       id,
-      name
+      name,
     }));
 
     const filtersSummary = {
