@@ -668,7 +668,8 @@ export class TicketService {
 
     const ticketStatuses = newTickets.reduce(
       (acc: Record<string, number>, { currentState }) => {
-        acc[currentState] = (acc[currentState] || 0) + 1;
+        const _currentState = currentState.replace(' ', '');
+        acc[_currentState] = (acc[_currentState] || 0) + 1;
         return acc;
       },
       {},
@@ -710,11 +711,12 @@ export class TicketService {
         technician: ticket.technicals[0]?.email || 'N/A',
       };
 
-      if (!ticketsByStatus[ticket.ticket.currentState]) {
-        ticketsByStatus[ticket.ticket.currentState] = [];
+      const currentState = ticket.ticket.currentState.replace(' ', '');
+      if (!ticketsByStatus[currentState]) {
+        ticketsByStatus[currentState] = [];
       }
 
-      ticketsByStatus[ticket.ticket.currentState].push(transformedTicket);
+      ticketsByStatus[currentState].push(transformedTicket);
     });
     return ticketsByStatus;
   }
