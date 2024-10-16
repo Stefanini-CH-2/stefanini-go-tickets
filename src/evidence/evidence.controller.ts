@@ -3,7 +3,7 @@ import { EvidenceService } from './evidence.service';
 import { Evidence } from './dto/create-evidence.dto';
 import { UpdateEvidenceDto } from './dto/update-evidence.dto';
 import { plainToClass } from 'class-transformer';
-import { QueryExclude, QueryFilters, QueryParams, QuerySort } from 'stefaninigo';
+import { QueryExclude, QueryFilters, QueryParams, QuerySearch, QuerySort } from 'stefaninigo';
 import { ParseJsonPipe } from 'src/pipes/json.pipe';
 import { Utils } from 'src/utils/utils';
 
@@ -40,10 +40,13 @@ export class EvidenceController {
     exclude: QueryExclude,
     @Query('fields', new ParseJsonPipe<string[]>(Array)) fields: string[],
     @Query('sort', new ParseJsonPipe<QuerySort>(QuerySort)) sort: QuerySort,
+    @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
+    search: QuerySearch,
 ) {
     try {
         const queryParams: QueryParams = {
             filters,
+            search,
             exclude,
             fields,
             sort,

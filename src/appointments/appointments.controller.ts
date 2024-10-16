@@ -4,7 +4,7 @@ import { Appointment } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { plainToClass } from 'class-transformer';
 import { ParseJsonPipe } from 'src/pipes/json.pipe';
-import { QueryExclude, QueryFilters, QueryParams, QuerySort } from 'stefaninigo';
+import { QueryExclude, QueryFilters, QueryParams, QuerySearch, QuerySort } from 'stefaninigo';
 import { Utils } from 'src/utils/utils';
 
 @Controller('appointments')
@@ -40,10 +40,13 @@ export class AppointmentsController {
     exclude: QueryExclude,
     @Query('fields', new ParseJsonPipe<string[]>(Array)) fields: string[],
     @Query('sort', new ParseJsonPipe<QuerySort>(QuerySort)) sort: QuerySort,
+    @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
+    search: QuerySearch,
 ) {
     try {
         const queryParams: QueryParams = {
             filters,
+            search,
             exclude,
             fields,
             sort,
