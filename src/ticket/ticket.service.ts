@@ -20,6 +20,7 @@ interface TransformedTicket {
   region: string;
   comuna: string;
   technician: string;
+  forToday?: boolean;
 }
 
 interface TicketsByStatus {
@@ -114,11 +115,7 @@ export class TicketService {
     };
   }
 
-  async listFlows(
-    page: number,
-    limit: number,
-    queryParams: QueryParams,
-  ) {
+  async listFlows(page: number, limit: number, queryParams: QueryParams) {
     page = Math.max(page, 1);
     const start = (page - 1) * limit;
     const total = await this.databaseService.count(
@@ -702,14 +699,23 @@ export class TicketService {
     const ticketsByStatus: TicketsByStatus = {};
 
     tickets.forEach((ticket) => {
+      const date = new Date(ticket.ticket.plannedDate)
+        .toISOString()
+        .split('T')[0];
+
+      const now = new Date().toISOString().split('T')[0];
       const transformedTicket: TransformedTicket = {
         id: ticket.ticket.id,
         ticketNumber: ticket.ticket.ticket_number,
-        date: new Date(ticket.ticket.plannedDate).toISOString().split('T')[0],
+        date: date,
         region: ticket.branch.location.region,
         comuna: ticket.branch.location.commune,
-        technician: ticket.technicals[0]?.email || 'N/A',
+        technician: ticket.technicals[0]?.fullName || 'N/A',
       };
+
+      if (ticket.ticket.currentState === 'Coordinado') {
+        transformedTicket.forToday = date == now;
+      }
 
       const currentState = ticket.ticket.currentState.replace(' ', '');
       if (!ticketsByStatus[currentState]) {
