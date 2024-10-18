@@ -6,12 +6,13 @@ import {
 } from '@nestjs/common';
 import { Ticket } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { DatabaseService, QueryParams, QuerySearch } from 'stefaninigo';
+import { DatabaseService, QueryParams } from 'stefaninigo';
 import { v4 as uuidv4 } from 'uuid';
 import { StatesHistory } from 'src/states_history/dto/create-states-history.dto';
 import { Utils } from 'src/utils/utils';
 import { Evidence } from 'src/evidence/dto/create-evidence.dto';
 import { Comment } from 'src/comment/dto/create-comment.dto';
+import * as dayjs from 'dayjs';
 
 interface TransformedTicket {
   id: string;
@@ -20,7 +21,7 @@ interface TransformedTicket {
   region: string;
   comuna: string;
   technician: string;
-  forToday?: boolean;
+  appointmentStatus?: string;
 }
 
 interface TicketsByStatus {
@@ -714,7 +715,15 @@ export class TicketService {
       };
 
       if (ticket.ticket.currentState === 'Coordinado') {
-        transformedTicket.forToday = date == now;
+        const date1 = dayjs(date);
+        const date2 = dayjs(now);
+        if (date1.isAfter(date2)) {
+          transformedTicket.appointmentStatus = 'upToDate';
+        } else if (date1.isBefore(date2)) {
+          transformedTicket.appointmentStatus = 'delayed';
+        } else {
+          transformedTicket.appointmentStatus = 'today';
+        }
       }
 
       const currentState = ticket.ticket.currentState.replace(' ', '');
