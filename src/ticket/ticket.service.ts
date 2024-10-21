@@ -420,9 +420,13 @@ export class TicketService {
         )
       : [];
 
-    const statesHistory = statesHistoryList.filter(
-      (history) => history.ticketId === ticket.id,
-    );
+    const statesHistory = statesHistoryList
+      .filter((history) => history.ticketId === ticket.id)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+
     const comments = commentsList.filter(
       (comment) => comment.ticketId === ticket.id,
     );
