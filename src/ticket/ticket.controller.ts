@@ -152,4 +152,49 @@ export class TicketController {
       return error.message;
     }
   }
+
+  @Post(':id/technicians')
+  async assignTechnician(@Param('id') id: string, @Body() body: any) {
+    try {
+      const {technicianId, dispatcherId} = body;
+      const result = await this.ticketService.assignTechnician(id, technicianId, dispatcherId);
+      return plainToClass(Ticket, result);
+    } catch (error) {
+      return error.message;
+    }
+  }
+
+  @Delete(':id/technicians')
+  async unassignTechnicians(@Param('id') id: string, @Body() body: any ) {
+    try {
+      const {technicianId, dispatcherId} = body;
+      const result = await this.ticketService.unassignTechnician(id, technicianId, dispatcherId);
+      return plainToClass(Ticket, result);
+    } catch (error) {
+      return error.message;
+    }
+  }
+
+  @Post(':id/dispatchers')
+  async assignDispatcher(@Param('id') id: string, @Body() body: any) {
+    try {
+      const {newDispatcherId, currentDispatcherId} = body;
+      const result = await this.ticketService.assignDispatcher(id, newDispatcherId, currentDispatcherId );
+      return plainToClass(Ticket, result);
+    } catch (error) {
+      return error.message;
+    }
+  }
+
+  @Delete(':id/dispatchers')
+  async unassignDispatchers(@Param('id') id: string,  @Body() body: any) {
+    try {
+      const {dispatcherId} = body;
+      const result = await this.ticketService.unassignDispatcher(id, dispatcherId);
+      return plainToClass(Ticket, result);
+    } catch (error) {
+      return error.message;
+    }
+  }
 }
+

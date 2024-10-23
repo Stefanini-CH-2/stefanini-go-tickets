@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   HttpException,
   Inject,
   Injectable,
@@ -12,6 +13,7 @@ import { StatesHistory } from 'src/states_history/dto/create-states-history.dto'
 import { Utils } from 'src/utils/utils';
 import { Evidence } from 'src/evidence/dto/create-evidence.dto';
 import { Comment } from 'src/comment/dto/create-comment.dto';
+import { EmployeeRole, Provider } from './enums';
 import * as dayjs from 'dayjs';
 
 interface TransformedTicket {
@@ -31,9 +33,11 @@ interface TicketsByStatus {
 @Injectable()
 export class TicketService {
   private collectionName: string = 'tickets';
+  private employeesCollection = 'employees';
+
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
-  ) {}
+  ) { }
 
   async create(tickets: Ticket | Ticket[]) {
     const ticket = await this.databaseService.list(
@@ -411,13 +415,13 @@ export class TicketService {
     );
     const coordinators = Array.isArray(ticket.coordinators)
       ? coordinatorsList.filter((coordinator) =>
-          ticket.coordinators.map((c) => c.id)?.includes(coordinator.id),
-        )
+        ticket.coordinators.map((c) => c.id)?.includes(coordinator.id),
+      )
       : [];
     const technicals = Array.isArray(ticket.technicals)
       ? technicalsList.filter((technical) =>
-          ticket.technicals.map((t) => t.id)?.includes(technical.id),
-        )
+        ticket.technicals.map((t) => t.id)?.includes(technical.id),
+      )
       : [];
 
     const statesHistory = statesHistoryList
@@ -738,5 +742,245 @@ export class TicketService {
       ticketsByStatus[currentState].push(transformedTicket);
     });
     return ticketsByStatus;
+  }
+
+  // Asignar técnico con historial de asignación
+  async assignTechnician(ticketId: string, technicianId: string, dispatcherId: string) {
+    const ticket = await this.getTicketById(ticketId);
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    const technician = await this.getEmployeeById(technicianId);
+    if (!technician) throw new NotFoundException('Technician not found');
+
+    const dispatcher = await this.getEmployeeById(dispatcherId);
+    if (!dispatcher) throw new NotFoundException('Dispatcher not found');
+
+    // Validación: Solo admin de Stefanini puede asignar técnicos de cualquier proveedor
+    if (dispatcher.role !== EmployeeRole.ADMIN && dispatcher.provider !== technician.provider) {
+      throw new ForbiddenException('Dispatchers can only assign technicians from their own provider');
+    }
+
+    const updatedAt = new Date().toISOString();
+    const updatedTechnicals = [
+      ...ticket.technicals.map(tech => {
+        if (tech.enabled) {
+          return {
+            ...tech,
+            enabled: false,
+            unassignedAt: updatedAt
+          };
+        }
+        return tech;
+      }),
+      {
+        id: technicianId,
+        provider: technician.provider,
+        role: technician.role,
+        assignedAt: updatedAt,
+        enabled: true,
+      }
+    ];
+
+    await this.updateTicketField(ticketId, { technicals: updatedTechnicals });
+
+    // Cambiar el estado del ticket y crear historial
+    await this.changeTicketState(ticketId, 'assign_technician', dispatcherId, technicianId, ticket.currentState);
+  }
+
+  async unassignTechnician(ticketId: string, technicianId: string | null, dispatcherId: string) {
+    const ticket = await this.getTicketById(ticketId);
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    const dispatcher = await this.getEmployeeById(dispatcherId);
+    if (!dispatcher) throw new NotFoundException('Dispatcher not found');
+
+    let technicianToUnassign;
+
+    // Si no se proporciona technicianId, buscar el único técnico habilitado
+    if (!technicianId) {
+      technicianToUnassign = ticket.technicals.find(tech => tech.enabled);
+      if (!technicianToUnassign) {
+        return 'No technicians are currently assigned';
+      }
+      technicianId = technicianToUnassign.id;
+    } else {
+      // Buscar el técnico por ID proporcionado
+      technicianToUnassign = ticket.technicals.find(tech => tech.id === technicianId);
+      if (!technicianToUnassign) throw new NotFoundException('Technician not found in this ticket');
+    }
+
+    // Validación: Solo un dispatcher del mismo proveedor o un admin de Stefanini puede desasignar técnicos
+    if (dispatcher.role !== EmployeeRole.ADMIN && dispatcher.provider !== technicianToUnassign.provider) {
+      throw new ForbiddenException('You are not authorized to unassign technicians from another provider');
+    }
+
+    if (!technicianToUnassign.enabled) {
+      return 'Technician was already unassigned';
+    }
+
+    const unassignedAt = new Date().toISOString();
+
+    const updatedTechnicals = ticket.technicals.map(tech => {
+      if (tech.id === technicianId && tech.enabled) {
+        return {
+          ...tech,
+          enabled: false,
+          unassignedAt
+        };
+      }
+      return tech;
+    });
+
+    await this.updateTicketField(ticketId, { technicals: updatedTechnicals });
+
+    // Cambiar el estado del ticket y crear historial
+    await this.changeTicketState(ticketId, 'unnassign_technician', dispatcherId, technicianId, ticket.currentState);
+  }
+
+  async assignDispatcher(ticketId: string, newDispatcherId: string, currentDispatcherId: string) {
+    const ticket = await this.getTicketById(ticketId);
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    const currentDispatcher = await this.getEmployeeById(currentDispatcherId);
+    if (!currentDispatcher) throw new NotFoundException('Current dispatcher not found');
+
+    const newDispatcher = await this.getEmployeeById(newDispatcherId);
+    if (!newDispatcher) throw new NotFoundException('New dispatcher not found');
+
+    if (currentDispatcher.role !== EmployeeRole.ADMIN && newDispatcher.provider !== Provider.STEFANINI) {
+      throw new ForbiddenException('Dispatchers from other providers can only assign to Stefanini dispatchers');
+    }
+
+    if (currentDispatcher.role === EmployeeRole.ADMIN) {
+      if (newDispatcher.role === EmployeeRole.DISPATCHER) {
+        await this.changeTicketState(ticketId, 'assign_dispatcher', currentDispatcherId, null, ticket.currentState);
+        await this.unassignTechnician(ticketId, null, currentDispatcherId);
+      }
+    }
+
+    if (currentDispatcher.role === EmployeeRole.DISPATCHER && newDispatcher.role === EmployeeRole.ADMIN && newDispatcher.provider === Provider.STEFANINI) {
+      await this.changeTicketState(ticketId, 'returned', currentDispatcherId, null, ticket.currentState);
+      await this.unassignTechnician(ticketId, null, currentDispatcherId);
+    }
+
+    const updatedAt = new Date().toISOString();
+
+    const updatedDispatchers = [
+      ...ticket.coordinators.map(dispatcher => {
+        if (dispatcher.enabled) {
+          return {
+            ...dispatcher,
+            enabled: false,
+            unassignedAt: updatedAt
+          };
+        }
+        return dispatcher;
+      }),
+      {
+        id: newDispatcherId,
+        provider: newDispatcher.provider,
+        role: newDispatcher.role,
+        assignedAt: updatedAt,
+        enabled: true
+      }
+    ];
+
+    return this.updateTicketField(ticketId, { coordinators: updatedDispatchers });
+  }
+
+  async unassignDispatcher(ticketId: string, dispatcherId: string) {
+    const ticket = await this.getTicketById(ticketId);
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    const dispatcher = await this.getEmployeeById(dispatcherId);
+    if (!dispatcher) throw new NotFoundException('Dispatcher not found');
+
+    if (dispatcher.role !== EmployeeRole.ADMIN) {
+      throw new ForbiddenException('Only Stefanini admins can unassign dispatchers');
+    }
+
+    const unassignedAt = new Date().toISOString();
+
+    const updatedDispatchers = ticket.coordinators.map(dispatcher => {
+      if (dispatcher.id === dispatcherId && dispatcher.enabled) {
+        return {
+          ...dispatcher,
+          enabled: false,
+          unassignedAt
+        };
+      }
+      return dispatcher;
+    });
+
+    const anyEnabled = ticket.coordinators.some(dispatcher => dispatcher.id === dispatcherId && dispatcher.enabled);
+    if (!anyEnabled) {
+      return 'There is not dispatchers enabled to unassign';
+    }
+
+    await this.updateTicketField(ticketId, { coordinators: updatedDispatchers });
+
+    // Cambiar el estado del ticket y crear historial
+    await this.changeTicketState(ticketId, 'unnassign_dispatcher', dispatcherId, null, ticket.currentState);
+  }
+
+  // Actualizar el cambio de estado y crear historial
+  private async changeTicketState(ticketId: string, action: string, dispatcherId: string, technicalId: string, currentState: string) {
+    const updatedAt = new Date().toISOString();
+    const newStateId = this.getStateId(action);
+    if (!this.isValidAction(currentState, action)) {
+      throw new ForbiddenException('Action is not allowed in the current state');
+    };
+    await this.updateTicketField(ticketId, { currentState: newStateId, updatedAt });
+
+    const stateHistory: StatesHistory = {
+      ticketId,
+      stateId: newStateId,
+      createdAt: updatedAt,
+      description: `State changed from ${currentState} to ${newStateId}`,
+      dispatcherId: dispatcherId || null,
+      technicalId: technicalId || null
+    };
+
+    await this.databaseService.create(stateHistory, 'states_history');
+  }
+
+
+  private async getEmployeeById(employeeId: string) {
+    return await this.databaseService.get(employeeId, this.employeesCollection);
+  }
+
+  private async updateTicketField(ticketId: string, fields: Partial<UpdateTicketDto>) {
+    return await this.databaseService.update(ticketId, fields, this.collectionName);
+  }
+
+  private async getTicketById(ticketId: string) {
+    return await this.databaseService.get(ticketId, this.collectionName);
+  }
+
+  private getStateId(action: string): string {
+    const stateActionMapping = {
+      'assign_technician': 'TecnicoAsignado',
+      'unnassign_technician': 'TecnicoSinAsignar',
+      'assign_dispatcher': 'DispatcherAsignado',
+      'unnassign_dispatcher': 'DispatcherSinAsignar',
+      'returned': 'Retornado',
+    };
+    return stateActionMapping[action];
+  }
+
+  private isValidAction(currentState: string, action: string): boolean {
+    const invalidStatesForActions = {
+      'assign_technician': ['EnAtención', 'Resuelto'],
+      'unnassign_technician': ['Cerrado'],
+      'assign_dispatcher': ['Cerrado'],
+      'unnassign_dispatcher': ['Cerrado'],
+      'returned': ['Cerrado'],
+    };
+  
+    if (invalidStatesForActions[action].includes(currentState)) {
+      return false;
+    }
+  
+    return true;
   }
 }
