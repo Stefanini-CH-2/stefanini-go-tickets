@@ -493,7 +493,7 @@ export class TicketService {
       return {
         ...comment,
         employeeName: employee
-          ? `${employee.firstName} ${employee.secondName} ${employee.firstSurname} ${employee.secondSurname}`
+          ? `${employee.firstName || ''} ${employee.secondName || ''} ${employee.firstSurname || ''} ${employee.secondSurname || ''}`
           : 'Nombre no encontrado',
       };
     });
