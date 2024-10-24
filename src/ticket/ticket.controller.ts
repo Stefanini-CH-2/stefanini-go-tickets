@@ -158,7 +158,7 @@ export class TicketController {
     try {
       const {technicianId, dispatcherId} = body;
       const result = await this.ticketService.assignTechnician(id, technicianId, dispatcherId);
-      return plainToClass(Ticket, result);
+      return result;
     } catch (error) {
       return error.message;
     }
@@ -169,7 +169,7 @@ export class TicketController {
     try {
       const {technicianId, dispatcherId} = body;
       const result = await this.ticketService.unassignTechnician(id, technicianId, dispatcherId);
-      return plainToClass(Ticket, result);
+      return result;
     } catch (error) {
       return error.message;
     }
@@ -180,7 +180,7 @@ export class TicketController {
     try {
       const {newDispatcherId, currentDispatcherId} = body;
       const result = await this.ticketService.assignDispatcher(id, newDispatcherId, currentDispatcherId );
-      return plainToClass(Ticket, result);
+      return result;
     } catch (error) {
       return error.message;
     }
@@ -191,7 +191,7 @@ export class TicketController {
     try {
       const {dispatcherId} = body;
       const result = await this.ticketService.unassignDispatcher(id, dispatcherId);
-      return plainToClass(Ticket, result);
+      return result;
     } catch (error) {
       return error.message;
     }

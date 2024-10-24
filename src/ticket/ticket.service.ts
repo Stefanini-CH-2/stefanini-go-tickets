@@ -755,6 +755,10 @@ export class TicketService {
     const dispatcher = await this.getEmployeeById(dispatcherId);
     if (!dispatcher) throw new NotFoundException('Dispatcher not found');
 
+    const currentlyAssignedTechnician = ticket.technicals.find(tech => tech.id === technicianId && tech.enabled);
+    if (currentlyAssignedTechnician) {
+      return `Technician ${technicianId} is already assigned to ticket ${ticketId}.`;
+    }
     // Validación: Solo admin de Stefanini puede asignar técnicos de cualquier proveedor
     if (dispatcher.role !== EmployeeRole.ADMIN && dispatcher.provider !== technician.provider) {
       throw new ForbiddenException('Dispatchers can only assign technicians from their own provider');
@@ -767,6 +771,7 @@ export class TicketService {
           return {
             ...tech,
             enabled: false,
+            unassignedBy: dispatcherId,
             unassignedAt: updatedAt
           };
         }
@@ -776,6 +781,7 @@ export class TicketService {
         id: technicianId,
         provider: technician.provider,
         role: technician.role,
+        assignedBy: dispatcherId,
         assignedAt: updatedAt,
         enabled: true,
       }
@@ -785,6 +791,7 @@ export class TicketService {
 
     // Cambiar el estado del ticket y crear historial
     await this.changeTicketState(ticketId, 'assign_technician', dispatcherId, technicianId, ticket.currentState);
+    return `Technician ${technicianId} successfully assigned to ticket ${ticketId} by dispatcher ${dispatcherId}.`;
   }
 
   async unassignTechnician(ticketId: string, technicianId: string | null, dispatcherId: string) {
@@ -825,6 +832,7 @@ export class TicketService {
         return {
           ...tech,
           enabled: false,
+          unassignedBy: dispatcherId,
           unassignedAt
         };
       }
@@ -835,6 +843,7 @@ export class TicketService {
 
     // Cambiar el estado del ticket y crear historial
     await this.changeTicketState(ticketId, 'unnassign_technician', dispatcherId, technicianId, ticket.currentState);
+    return `Technician ${technicianId} successfully unassigned from ticket ${ticketId} by dispatcher ${dispatcherId}.`;
   }
 
   async assignDispatcher(ticketId: string, newDispatcherId: string, currentDispatcherId: string) {
@@ -847,12 +856,17 @@ export class TicketService {
     const newDispatcher = await this.getEmployeeById(newDispatcherId);
     if (!newDispatcher) throw new NotFoundException('New dispatcher not found');
 
+    const currentlyAssignedDispatcher = ticket.coordinators.find(dispatcher => dispatcher.id === newDispatcherId && dispatcher.enabled);
+    if (currentlyAssignedDispatcher) {
+      return `Dispatcher ${newDispatcherId} is already assigned to ticket ${ticketId}.`;
+    }
+
     if (currentDispatcher.role !== EmployeeRole.ADMIN && newDispatcher.provider !== Provider.STEFANINI) {
       throw new ForbiddenException('Dispatchers from other providers can only assign to Stefanini dispatchers');
     }
 
     if (currentDispatcher.role === EmployeeRole.ADMIN) {
-      if (newDispatcher.role === EmployeeRole.DISPATCHER) {
+      if (newDispatcher.role === EmployeeRole.DISPATCHER || currentDispatcher.role === EmployeeRole.ADMIN) {
         await this.changeTicketState(ticketId, 'assign_dispatcher', currentDispatcherId, null, ticket.currentState);
         await this.unassignTechnician(ticketId, null, currentDispatcherId);
       }
@@ -871,6 +885,7 @@ export class TicketService {
           return {
             ...dispatcher,
             enabled: false,
+            unassignedBy: currentDispatcherId,
             unassignedAt: updatedAt
           };
         }
@@ -880,12 +895,14 @@ export class TicketService {
         id: newDispatcherId,
         provider: newDispatcher.provider,
         role: newDispatcher.role,
+        assignedBy: currentDispatcherId,
         assignedAt: updatedAt,
         enabled: true
       }
     ];
 
-    return this.updateTicketField(ticketId, { coordinators: updatedDispatchers });
+    await this.updateTicketField(ticketId, { coordinators: updatedDispatchers });
+    return `Dispatcher ${newDispatcherId} successfully assigned to ticket ${ticketId} by dispatcher ${currentDispatcherId}.`;
   }
 
   async unassignDispatcher(ticketId: string, dispatcherId: string) {
@@ -906,6 +923,7 @@ export class TicketService {
         return {
           ...dispatcher,
           enabled: false,
+          unassignedBy: dispatcherId,
           unassignedAt
         };
       }
@@ -921,6 +939,7 @@ export class TicketService {
 
     // Cambiar el estado del ticket y crear historial
     await this.changeTicketState(ticketId, 'unnassign_dispatcher', dispatcherId, null, ticket.currentState);
+    return `Dispatcher ${dispatcherId} successfully unassigned from ticket ${ticketId}.`;
   }
 
   // Actualizar el cambio de estado y crear historial
