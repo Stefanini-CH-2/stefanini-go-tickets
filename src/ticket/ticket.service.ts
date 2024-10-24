@@ -979,9 +979,9 @@ export class TicketService {
   private getStateId(action: string): string {
     const stateActionMapping = {
       'assign_technician': 'TecnicoAsignado',
-      'unnassign_technician': 'TecnicoSinAsignar',
+      'unnassign_technician': 'SinTecnico',
       'assign_dispatcher': 'DispatcherAsignado',
-      'unnassign_dispatcher': 'DispatcherSinAsignar',
+      'unnassign_dispatcher': 'SinDispatcher',
       'returned': 'Retornado',
     };
     return stateActionMapping[action];
@@ -989,7 +989,7 @@ export class TicketService {
 
   private isValidAction(currentState: string, action: string): boolean {
     const invalidStatesForActions = {
-      'assign_technician': ['EnAtención', 'Resuelto'],
+      'assign_technician': ['EnAtención', 'Cerrado'],
       'unnassign_technician': ['Cerrado'],
       'assign_dispatcher': ['Cerrado'],
       'unnassign_dispatcher': ['Cerrado'],
