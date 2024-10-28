@@ -33,7 +33,7 @@ export class TicketService {
   private collectionName: string = 'tickets';
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
-  ) {}
+  ) { }
 
   async create(tickets: Ticket | Ticket[]) {
     const ticket = await this.databaseService.list(
@@ -411,13 +411,13 @@ export class TicketService {
     );
     const coordinators = Array.isArray(ticket.coordinators)
       ? coordinatorsList.filter((coordinator) =>
-          ticket.coordinators.map((c) => c.id)?.includes(coordinator.id),
-        )
+        ticket.coordinators.map((c) => c.id)?.includes(coordinator.id),
+      )
       : [];
     const technicals = Array.isArray(ticket.technicals)
       ? technicalsList.filter((technical) =>
-          ticket.technicals.map((t) => t.id)?.includes(technical.id),
-        )
+        ticket.technicals.map((t) => t.id)?.includes(technical.id),
+      )
       : [];
 
     const statesHistory = statesHistoryList
@@ -502,6 +502,8 @@ export class TicketService {
         updateAt: ticket?.updateAt,
         plannedDate: ticket?.plannedDate,
         sla: ticket?.sla,
+        numSla: ticket?.numSla,
+        dateSla: ticket?.dateSla,
         attentionType: attentionType?.values?.find(
           (_attentionType) => _attentionType.value === ticket?.attentionType,
         ),
