@@ -506,6 +506,8 @@ export class TicketService {
         updateAt: ticket?.updateAt,
         plannedDate: ticket?.plannedDate,
         sla: ticket?.sla,
+        numSla: ticket?.numSla,
+        dateSla: ticket?.dateSla,
         attentionType: attentionType?.values?.find(
           (_attentionType) => _attentionType.value === ticket?.attentionType,
         ),

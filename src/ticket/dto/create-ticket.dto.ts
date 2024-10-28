@@ -2,6 +2,7 @@ import { Exclude, Type } from 'class-transformer';
 import {
     IsArray,
     IsBoolean,
+    IsDate,
     IsNotEmpty,
     IsOptional,
     IsString,
@@ -35,6 +36,14 @@ export class Ticket {
     @IsString()
     @IsOptional()
     sla: string;
+
+    @IsDate()
+    @IsOptional()
+    dateSla: Date;
+
+    @IsString()
+    @IsOptional()
+    numSla: string;
 
     @IsNotEmpty()
     attentionType: string;
