@@ -19,7 +19,8 @@ import * as dayjs from 'dayjs';
 interface TransformedTicket {
   id: string;
   ticketNumber: string;
-  date: string;
+  createdAt: string;
+  coordinatedAt?: string;
   region: string;
   comuna: string;
   technician: string;
@@ -336,7 +337,7 @@ export class TicketService {
       this.databaseService.list(
         0,
         LIMIT,
-        { filters: { ticketId: ticketsId } },
+        { filters: { ticketId: ticketsId }, sort: { endDate: "desc" } },
         'appointments',
       ),
       this.databaseService.get('attentionType', 'datas'),
@@ -710,22 +711,22 @@ export class TicketService {
     const ticketsByStatus: TicketsByStatus = {};
 
     tickets.forEach((ticket) => {
-      const date = new Date(ticket.ticket.plannedDate)
-        .toISOString()
-        .split('T')[0];
+      const createdAt = new Date(ticket.ticket.createdAt).toISOString();
 
       const now = new Date().toISOString().split('T')[0];
       const transformedTicket: TransformedTicket = {
         id: ticket.ticket.id,
         ticketNumber: ticket.ticket.ticket_number,
-        date: date,
+        createdAt,
         region: ticket.branch.location.region,
         comuna: ticket.branch.location.commune,
         technician: ticket.technicals[0]?.fullName || 'N/A',
       };
 
       if (ticket.ticket.currentState === 'Coordinado') {
-        const date1 = dayjs(date);
+        transformedTicket.coordinatedAt = ticket.appointments[0]?.endDate;
+        const coordinatedAt = new Date(transformedTicket.coordinatedAt).toISOString();
+        const date1 = dayjs(coordinatedAt);
         const date2 = dayjs(now);
         if (date1.isAfter(date2)) {
           transformedTicket.appointmentStatus = 'upToDate';
