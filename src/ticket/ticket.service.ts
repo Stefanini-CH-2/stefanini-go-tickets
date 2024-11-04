@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   HttpException,
   Inject,
@@ -15,6 +16,7 @@ import { Evidence } from 'src/evidence/dto/create-evidence.dto';
 import { Comment } from 'src/comment/dto/create-comment.dto';
 import { EmployeeRole, Provider } from './enums';
 import * as dayjs from 'dayjs';
+import { StateMachineService } from './state_machine.service';
 
 interface TransformedTicket {
   id: string;
@@ -38,6 +40,7 @@ export class TicketService {
 
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
+    private readonly stateMachine: StateMachineService
   ) { }
 
   async create(tickets: Ticket | Ticket[]) {
@@ -119,6 +122,28 @@ export class TicketService {
       limit,
       records,
     };
+  }
+
+  async updateState(ticketId: string, newState: string): Promise<any> {
+    const ticket = await this.getTicketById(ticketId);
+    if (!ticket) throw new NotFoundException('Ticket no encontrado');
+
+    // Obtiene la máquina de estados usando el commerceId del ticket
+    const stateMachine = await this.stateMachine.getStateMachine(ticket.commerceId);
+
+    // Verifica si la transición de estado es válida
+    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState, newState)) {
+      throw new BadRequestException(`Transición inválida de ${ticket.currentState} a ${newState}`);
+    }
+
+    // Actualiza el estado del ticket
+    const updatedAt = new Date().toISOString();
+    await this.updateTicketField(ticketId, { currentState: newState, updatedAt });
+
+    // Registra el cambio en el historial de estados
+    await this.stateMachine.recordStateChange(ticket.commerceId, ticketId, ticket.currentState, newState, ticket.coordinators, ticket.technicals);
+
+    return `Estado actualizado a ${newState} con éxito para el ticket ${ticket.ticket_number}`;
   }
 
   async listFlows(page: number, limit: number, queryParams: QueryParams) {
@@ -747,35 +772,48 @@ export class TicketService {
     return ticketsByStatus;
   }
 
-  // Asignar técnico con historial de asignación
   async assignTechnician(ticketId: string, technicianId: string, dispatcherId: string) {
     const ticket = await this.getTicketById(ticketId);
-    if (!ticket) throw new NotFoundException('Ticket not found');
+    if (!ticket) throw new NotFoundException('Ticket no encontrado');
 
     const technician = await this.getEmployeeById(technicianId);
-    if (!technician) throw new NotFoundException('Technician not found');
+    if (!technician) throw new NotFoundException('Técnico no encontrado');
 
     const dispatcher = await this.getEmployeeById(dispatcherId);
-    if (!dispatcher) throw new NotFoundException('Dispatcher not found');
+    if (!dispatcher) throw new NotFoundException('Despachador no encontrado');
 
-    const currentlyAssignedTechnician = ticket.technicals.find(tech => tech.id === technicianId && tech.enabled);
+    const currentlyAssignedTechnician = ticket.technicals.find(
+      (tech) => tech.id === technicianId && tech.enabled
+    );
     if (currentlyAssignedTechnician) {
-      return `Technician ${technicianId} is already assigned to ticket ${ticketId}.`;
+      return `El técnico ${technician.firstName} ${technician.firstSurname} ya está asignado al ticket ${ticket.ticket_number}.`;
     }
-    // Validación: Solo admin de Stefanini puede asignar técnicos de cualquier proveedor
+
+    // Validación de permisos
     if (dispatcher.role !== EmployeeRole.ADMIN && dispatcher.provider !== technician.provider) {
-      throw new ForbiddenException('Dispatchers can only assign technicians from their own provider');
+      throw new ForbiddenException('Los despachadores solo pueden asignar técnicos de su propio proveedor');
+    }
+
+    // Validación de transición en la máquina de estados
+    const stateMachine = await this.stateMachine.getStateMachine(ticket.commerceId);
+    const targetState = 'technician_assigned';
+    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState, targetState)) {
+      throw new ForbiddenException(
+        `La transición de ${ticket.currentState} a ${targetState} no está permitida`
+      );
     }
 
     const updatedAt = new Date().toISOString();
+
+    // Actualizar técnicos
     const updatedTechnicals = [
-      ...ticket.technicals.map(tech => {
+      ...ticket.technicals.map((tech) => {
         if (tech.enabled) {
           return {
             ...tech,
             enabled: false,
             unassignedBy: dispatcherId,
-            unassignedAt: updatedAt
+            unassignedAt: updatedAt,
           };
         }
         return tech;
@@ -784,112 +822,146 @@ export class TicketService {
         id: technicianId,
         provider: technician.provider,
         role: technician.role,
+        name: `${technician.firstName} ${technician.firstSurname}`,
         assignedBy: dispatcherId,
         assignedAt: updatedAt,
         enabled: true,
-      }
+      },
     ];
 
-    await this.updateTicketField(ticketId, { technicals: updatedTechnicals });
+    await this.updateTicketField(ticketId, {
+      technicals: updatedTechnicals,
+      currentState: targetState,
+      updatedAt,
+    });
 
-    // Cambiar el estado del ticket y crear historial
-    await this.changeTicketState(ticketId, 'assign_technician', dispatcherId, technicianId, ticket.currentState);
-    return `Technician ${technicianId} successfully assigned to ticket ${ticketId} by dispatcher ${dispatcherId}.`;
+    await this.stateMachine.recordStateChange(
+      ticket.commerceId,
+      ticketId,
+      ticket.currentState,
+      targetState,
+      ticket.coordinators,
+      updatedTechnicals
+    );
+
+    return `El técnico ${technician.firstName} ${technician.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el despachador ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
   }
 
   async unassignTechnician(ticketId: string, technicianId: string | null, dispatcherId: string) {
     const ticket = await this.getTicketById(ticketId);
-    if (!ticket) throw new NotFoundException('Ticket not found');
+    if (!ticket) throw new NotFoundException('Ticket no encontrado');
 
     const dispatcher = await this.getEmployeeById(dispatcherId);
-    if (!dispatcher) throw new NotFoundException('Dispatcher not found');
+    if (!dispatcher) throw new NotFoundException('Despachador no encontrado');
 
     let technicianToUnassign;
 
-    // Si no se proporciona technicianId, buscar el único técnico habilitado
     if (!technicianId) {
-      technicianToUnassign = ticket.technicals.find(tech => tech.enabled);
+      technicianToUnassign = ticket.technicals.find((tech) => tech.enabled);
       if (!technicianToUnassign) {
-        return 'No technicians are currently assigned';
+        return 'No hay técnicos asignados actualmente';
       }
       technicianId = technicianToUnassign.id;
     } else {
-      // Buscar el técnico por ID proporcionado
-      technicianToUnassign = ticket.technicals.find(tech => tech.id === technicianId);
-      if (!technicianToUnassign) throw new NotFoundException('Technician not found in this ticket');
+      technicianToUnassign = ticket.technicals.find((tech) => tech.id === technicianId);
+      if (!technicianToUnassign) throw new NotFoundException('Técnico no encontrado en este ticket');
     }
 
-    // Validación: Solo un dispatcher del mismo proveedor o un admin de Stefanini puede desasignar técnicos
-    if (dispatcher.role !== EmployeeRole.ADMIN && dispatcher.provider !== technicianToUnassign.provider) {
-      throw new ForbiddenException('You are not authorized to unassign technicians from another provider');
+    if (
+      dispatcher.role !== EmployeeRole.ADMIN &&
+      dispatcher.provider !== technicianToUnassign.provider
+    ) {
+      throw new ForbiddenException('No está autorizado para desasignar técnicos de otro proveedor');
     }
 
     if (!technicianToUnassign.enabled) {
-      return 'Technician was already unassigned';
+      return 'El técnico ya estaba desasignado';
+    }
+
+    const stateMachine = await this.stateMachine.getStateMachine(ticket.commerceId);
+    const targetState = 'technician_unassigned';
+    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState, targetState)) {
+      throw new ForbiddenException(
+        `La transición de ${ticket.currentState} a ${targetState} no está permitida`
+      );
     }
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedTechnicals = ticket.technicals.map(tech => {
+    const updatedTechnicals = ticket.technicals.map((tech) => {
       if (tech.id === technicianId && tech.enabled) {
         return {
           ...tech,
           enabled: false,
           unassignedBy: dispatcherId,
-          unassignedAt
+          unassignedAt,
         };
       }
       return tech;
     });
 
-    await this.updateTicketField(ticketId, { technicals: updatedTechnicals });
+    await this.updateTicketField(ticketId, {
+      technicals: updatedTechnicals,
+      currentState: targetState,
+      updatedAt: unassignedAt,
+    });
 
-    // Cambiar el estado del ticket y crear historial
-    await this.changeTicketState(ticketId, 'unnassign_technician', dispatcherId, technicianId, ticket.currentState);
-    return `Technician ${technicianId} successfully unassigned from ticket ${ticketId} by dispatcher ${dispatcherId}.`;
+    await this.stateMachine.recordStateChange(
+      ticket.commerceId,
+      ticketId,
+      ticket.currentState,
+      targetState,
+      ticket.coordinators,
+      updatedTechnicals
+    );
+
+    return `El técnico ${technicianToUnassign.name} ha sido desasignado exitosamente del ticket ${ticket.ticket_number} por el despachador ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
   }
 
   async assignDispatcher(ticketId: string, newDispatcherId: string, currentDispatcherId: string) {
     const ticket = await this.getTicketById(ticketId);
-    if (!ticket) throw new NotFoundException('Ticket not found');
+    if (!ticket) throw new NotFoundException('Ticket no encontrado');
 
     const currentDispatcher = await this.getEmployeeById(currentDispatcherId);
-    if (!currentDispatcher) throw new NotFoundException('Current dispatcher not found');
+    if (!currentDispatcher) throw new NotFoundException('Despachador actual no encontrado');
 
     const newDispatcher = await this.getEmployeeById(newDispatcherId);
-    if (!newDispatcher) throw new NotFoundException('New dispatcher not found');
+    if (!newDispatcher) throw new NotFoundException('Nuevo despachador no encontrado');
 
-    const currentlyAssignedDispatcher = ticket.coordinators.find(dispatcher => dispatcher.id === newDispatcherId && dispatcher.enabled);
+    const currentlyAssignedDispatcher = ticket.coordinators.find(
+      (dispatcher) => dispatcher.id === newDispatcherId && dispatcher.enabled
+    );
     if (currentlyAssignedDispatcher) {
-      return `Dispatcher ${newDispatcherId} is already assigned to ticket ${ticketId}.`;
+      return `El despachador ${currentlyAssignedDispatcher.name} ya está asignado al ticket ${ticket.ticket_number}.`;
     }
 
-    if (currentDispatcher.role !== EmployeeRole.ADMIN && newDispatcher.provider !== Provider.STEFANINI) {
-      throw new ForbiddenException('Dispatchers from other providers can only assign to Stefanini dispatchers');
+    if (
+      currentDispatcher.role !== EmployeeRole.ADMIN &&
+      newDispatcher.provider !== Provider.STEFANINI
+    ) {
+      throw new ForbiddenException(
+        'Los despachadores de otros proveedores solo pueden asignar a despachadores de Stefanini'
+      );
     }
 
-    if (currentDispatcher.role === EmployeeRole.ADMIN) {
-      if (newDispatcher.role === EmployeeRole.DISPATCHER || currentDispatcher.role === EmployeeRole.ADMIN) {
-        await this.changeTicketState(ticketId, 'assign_dispatcher', currentDispatcherId, null, ticket.currentState);
-        await this.unassignTechnician(ticketId, null, currentDispatcherId);
-      }
-    }
-
-    if (currentDispatcher.role === EmployeeRole.DISPATCHER && newDispatcher.role === EmployeeRole.ADMIN && newDispatcher.provider === Provider.STEFANINI) {
-      await this.changeTicketState(ticketId, 'returned', currentDispatcherId, null, ticket.currentState);
-      await this.unassignTechnician(ticketId, null, currentDispatcherId);
+    const stateMachine = await this.stateMachine.getStateMachine(ticket.commerceId);
+    const targetState = 'dispatcher_assigned';
+    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState, targetState)) {
+      throw new ForbiddenException(
+        `La transición de ${ticket.currentState} a ${targetState} no está permitida`
+      );
     }
 
     const updatedAt = new Date().toISOString();
 
     const updatedDispatchers = [
-      ...ticket.coordinators.map(dispatcher => {
+      ...ticket.coordinators.map((dispatcher) => {
         if (dispatcher.enabled) {
           return {
             ...dispatcher,
             enabled: false,
             unassignedBy: currentDispatcherId,
-            unassignedAt: updatedAt
+            unassignedAt: updatedAt,
           };
         }
         return dispatcher;
@@ -898,15 +970,44 @@ export class TicketService {
         id: newDispatcherId,
         provider: newDispatcher.provider,
         role: newDispatcher.role,
+        name: `${newDispatcher.firstName} ${newDispatcher.firstSurname}`,
         assignedBy: currentDispatcherId,
         assignedAt: updatedAt,
-        enabled: true
-      }
+        enabled: true,
+      },
     ];
 
-    await this.updateTicketField(ticketId, { coordinators: updatedDispatchers });
-    return `Dispatcher ${newDispatcherId} successfully assigned to ticket ${ticketId} by dispatcher ${currentDispatcherId}.`;
+    const updatedTechnicals = ticket.technicals.map((tech) => {
+      if (tech.enabled) {
+        return {
+          ...tech,
+          enabled: false,
+          unassignedBy: currentDispatcherId,
+          unassignedAt: updatedAt,
+        };
+      }
+      return tech;
+    });
+
+    await this.updateTicketField(ticketId, {
+      coordinators: updatedDispatchers,
+      technicals: updatedTechnicals,
+      currentState: targetState,
+      updatedAt,
+    });
+
+    await this.stateMachine.recordStateChange(
+      ticket.commerceId,
+      ticketId,
+      ticket.currentState,
+      targetState,
+      updatedDispatchers,
+      updatedTechnicals
+    );
+
+    return `El despachador ${newDispatcher.firstName} ${newDispatcher.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el despachador ${currentDispatcher.firstName} ${currentDispatcher.firstSurname}. Todos los técnicos asignados previamente han sido desasignados.`;
   }
+
 
   async unassignDispatcher(ticketId: string, dispatcherId: string) {
     const ticket = await this.getTicketById(ticketId);
@@ -941,31 +1042,9 @@ export class TicketService {
     await this.updateTicketField(ticketId, { coordinators: updatedDispatchers });
 
     // Cambiar el estado del ticket y crear historial
-    await this.changeTicketState(ticketId, 'unnassign_dispatcher', dispatcherId, null, ticket.currentState);
+    //await this.changeTicketState(ticketId, 'unnassign_dispatcher', dispatcherId, null, ticket.currentState);
     return `Dispatcher ${dispatcherId} successfully unassigned from ticket ${ticketId}.`;
   }
-
-  // Actualizar el cambio de estado y crear historial
-  private async changeTicketState(ticketId: string, action: string, dispatcherId: string, technicalId: string, currentState: string) {
-    const updatedAt = new Date().toISOString();
-    const newStateId = this.getStateId(action);
-    if (!this.isValidAction(currentState, action)) {
-      throw new ForbiddenException('Action is not allowed in the current state');
-    };
-    await this.updateTicketField(ticketId, { currentState: newStateId, updatedAt });
-
-    const stateHistory: StatesHistory = {
-      ticketId,
-      stateId: newStateId,
-      createdAt: updatedAt,
-      description: `State changed from ${currentState} to ${newStateId}`,
-      dispatcherId: dispatcherId || null,
-      technicalId: technicalId || null
-    };
-
-    await this.databaseService.create(stateHistory, 'states_history');
-  }
-
 
   private async getEmployeeById(employeeId: string) {
     return await this.databaseService.get(employeeId, this.employeesCollection);
@@ -977,32 +1056,5 @@ export class TicketService {
 
   private async getTicketById(ticketId: string) {
     return await this.databaseService.get(ticketId, this.collectionName);
-  }
-
-  private getStateId(action: string): string {
-    const stateActionMapping = {
-      'assign_technician': 'TecnicoAsignado',
-      'unnassign_technician': 'SinTecnico',
-      'assign_dispatcher': 'DispatcherAsignado',
-      'unnassign_dispatcher': 'SinDispatcher',
-      'returned': 'Retornado',
-    };
-    return stateActionMapping[action];
-  }
-
-  private isValidAction(currentState: string, action: string): boolean {
-    const invalidStatesForActions = {
-      'assign_technician': ['EnAtención', 'Cerrado'],
-      'unnassign_technician': ['Cerrado'],
-      'assign_dispatcher': ['Cerrado'],
-      'unnassign_dispatcher': ['Cerrado'],
-      'returned': ['Cerrado'],
-    };
-  
-    if (invalidStatesForActions[action].includes(currentState)) {
-      return false;
-    }
-  
-    return true;
   }
 }

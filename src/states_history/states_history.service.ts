@@ -7,43 +7,52 @@ import { DatabaseService, QueryParams } from 'stefaninigo';
 @Injectable()
 export class StatesHistoryService {
   private collectionName: string = 'states_history';
+  private statesCollection: string = 'datas';
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
   ) {}
 
-  async create(states: StatesHistory | StatesHistory[]) {
+  async create(states: StatesHistory | StatesHistory[], commerceId: string): Promise<string[]> {
     const createdAt = new Date().toISOString();
-    const statesData = await this.databaseService.get("states", "datas");
+
+    // Obtiene la máquina de estados usando el commerceId
+    const stateMachines = await this.databaseService.list(0, 1, { filters: { commerceId, id: "state_machine" } }, this.statesCollection);
+    if (Array.isArray(stateMachines) && !stateMachines.length) {
+      throw new NotFoundException('Máquina de estados no encontrada');
+    }
+    const stateMachine = stateMachines[0];
+    // Mapea el estado usando la máquina de estados obtenida
     const mapState = (stateId: string) => {
-      const foundState = statesData.values.find((state: { name: string, value: string }) => state.value === stateId);
-      return foundState 
-        ? { name: foundState.name, value: foundState.value.replace(/\s+/g, '') } 
-        : { name: stateId, value: stateId.replace(/\s+/g, '') };
+      const foundState = stateMachine?.states?.find((state: { id: string }) => state.id === stateId);
+      return foundState
+        ? { name: foundState.label, value: foundState.id }
+        : { name: stateId, value: stateId };
     };
 
     if (Array.isArray(states)) {
       const statesWithIds = states.map((stateHistory) => {
         const mappedState = mapState(stateHistory.stateId);
-        stateHistory.stateId = stateHistory.stateId.replace(/\s+/g, '');
         return {
-          id: uuidv4().toString(),
+          id: uuidv4(),
           ...stateHistory,
           state: mappedState,
-          createdAt
+          createdAt,
         };
       });
       await this.databaseService.create(statesWithIds, this.collectionName);
       return statesWithIds.map((stateHistory) => stateHistory.id);
     } else {
-      const id = uuidv4().toString();
+      const id = uuidv4();
       const mappedState = mapState(states.stateId);
-      await this.databaseService.create({
-        id,
-        ...states,
-        state: mappedState,
-        createdAt
-      }, this.collectionName);
-      await this.databaseService.update(states.ticketId, {currentState: states.stateId }, "tickets");
+      await this.databaseService.create(
+        {
+          id,
+          ...states,
+          state: mappedState,
+          createdAt,
+        },
+        this.collectionName
+      );
       return [id];
     }
   }

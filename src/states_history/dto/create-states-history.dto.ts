@@ -77,6 +77,10 @@ export class StatesHistory {
     stateId: string;
 
     @IsString()
+    @IsNotEmpty()
+    commerceId: string;
+
+    @IsString()
     createdAt: string;
 
     @Exclude()

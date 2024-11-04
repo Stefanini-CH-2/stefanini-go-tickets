@@ -36,6 +36,16 @@ export class TicketController {
     }
   }
 
+  @Put(':id/states/:newState')
+  async updateState(@Param('id') id: string, @Param('newState') newState: string) {
+    try {
+      const result = await this.ticketService.updateState(id, newState);
+      return result;
+    } catch (error) {
+      return error.message;
+    }
+  }
+
   @Get('/summaries')
   async summaries(
     @Query('commercesId', new ParseJsonPipe<string[]>(Array))
