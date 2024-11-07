@@ -41,22 +41,6 @@ export class TicketService {
   ) { }
 
   async create(tickets: Ticket | Ticket[]) {
-    const ticket = await this.databaseService.list(
-      0,
-      1,
-      { filters: { ticket_number: tickets['ticket_number'] } },
-      'tickets',
-    );
-
-    if (Array.isArray(ticket)) {
-      if (ticket.length > 0) {
-        throw new HttpException(
-          `${tickets['ticket_number']} already exists`,
-          400,
-        );
-      }
-    }
-
     const createdAt = new Date().toISOString();
     if (Array.isArray(tickets)) {
       const ticketWithIds = tickets.map((ticket) => ({
@@ -998,11 +982,11 @@ export class TicketService {
       'unnassign_dispatcher': ['Cerrado'],
       'returned': ['Cerrado'],
     };
-  
+
     if (invalidStatesForActions[action].includes(currentState)) {
       return false;
     }
-  
+
     return true;
   }
 }
