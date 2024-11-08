@@ -77,13 +77,13 @@ export class Ticket {
     @ValidateNested({ each: true })
     @Type(() => CoordinatorOrTechnical)
     @IsNotEmpty()
-    coordinators: CoordinatorOrTechnical[];
+    dispatchers: CoordinatorOrTechnical[];
 
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => CoordinatorOrTechnical)
     @IsOptional()
-    technicals: CoordinatorOrTechnical[];
+    technicians: CoordinatorOrTechnical[];
 
     @Exclude()
     _id: string;

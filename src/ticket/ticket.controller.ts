@@ -50,8 +50,8 @@ export class TicketController {
   async summaries(
     @Query('commercesId', new ParseJsonPipe<string[]>(Array))
     commercesId: string[],
-    @Query('technicalsId', new ParseJsonPipe<string[]>(Array))
-    technicalsId: string[],
+    @Query('techniciansId', new ParseJsonPipe<string[]>(Array))
+    techniciansId: string[],
     @Query('regions', new ParseJsonPipe<string[]>(Array))
     regions: string[],
     @Query('startDate')
@@ -64,7 +64,7 @@ export class TicketController {
     return await this.ticketService.getSummary(
       commercesId,
       regions,
-      technicalsId,
+      techniciansId,
       startDate,
       endDate,
       ticketNumber,

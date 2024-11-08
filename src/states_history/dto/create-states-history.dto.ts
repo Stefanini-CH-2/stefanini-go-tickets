@@ -65,7 +65,7 @@ export class StatesHistory {
 
     @IsString()
     @IsOptional()
-    technicalId: string;
+    technicianId: string;
 
     @ValidateNested()
     @Type(() => Location)

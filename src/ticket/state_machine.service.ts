@@ -36,10 +36,10 @@ export class StateMachineService {
     return state ? state.transitions.includes(newState) : false;
   }
 
-  async recordStateChange(commerceId: string, ticketId: string, fromState: string, toState: string, coordinators: any[], technicals: any[]) {
+  async recordStateChange(commerceId: string, ticketId: string, fromState: string, toState: string, dispatchers: any[], technicians: any[]) {
     const updatedAt = new Date().toISOString();
-    const dispatcher = coordinators.find((c) => c.enabled);
-    const technician = technicals.find((t) => t.enabled);
+    const dispatcher = dispatchers.find((c) => c.enabled);
+    const technician = technicians.find((t) => t.enabled);
 
     const stateHistory: StatesHistory = {
       ticketId,
@@ -48,7 +48,7 @@ export class StateMachineService {
       description: `Cambio de estado de ${fromState} a ${toState}`,
       commerceId: commerceId,
       dispatcherId: dispatcher ? dispatcher.id : null,
-      technicalId: technician ? technician.id : null,
+      technicianId: technician ? technician.id : null,
     };
 
     await this.stateHistory.create(stateHistory, commerceId);
