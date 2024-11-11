@@ -7,6 +7,12 @@ enum Role {
 }
 
 class Approval {
+  @IsOptional()
+  userId: string;
+
+  @IsOptional()
+  contactId: string;
+
   @IsEnum(Role)
   @IsNotEmpty()
   role: Role;
@@ -14,6 +20,9 @@ class Approval {
   @IsString()
   @IsNotEmpty()
   signature: string;
+
+  @IsOptional()
+  fullName: string;
 }
 
 export class Evidence {
@@ -35,13 +44,13 @@ export class Evidence {
 
   @IsArray()
   @IsString({ each: true })
-  @IsOptional() 
+  @IsOptional()
   pictures: string[];
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => Approval)
-  @IsOptional() 
+  @IsOptional()
   approvals: Approval[];
 
   @Exclude()
