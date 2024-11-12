@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   HttpException,
   Inject,
@@ -932,7 +933,7 @@ export class TicketService {
       (dispatcher) => dispatcher.id === newDispatcherId && dispatcher.enabled
     );
     if (currentlyAssignedDispatcher) {
-      return `El despachador ${currentlyAssignedDispatcher.name} ya está asignado al ticket ${ticket.ticket_number}.`;
+      throw new ConflictException(`El despachador ${currentlyAssignedDispatcher.name} ya está asignado al ticket ${ticket.ticket_number}.`);
     }
 
     if (
