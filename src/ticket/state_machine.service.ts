@@ -32,14 +32,14 @@ export class StateMachineService {
     const machine = stateMachine || this.cachedStateMachine;
     if (!machine) throw new Error('No se ha cargado ninguna máquina de estados');
 
-    const state = machine.states.find((s) => s.id === currentState);
+    const state = machine.states?.find((s) => s.id === currentState);
     return state ? state.transitions.includes(newState) : false;
   }
 
   async recordStateChange(commerceId: string, ticketId: string, fromState: string, toState: string, dispatchers: any[], technicians: any[]) {
     const updatedAt = new Date().toISOString();
-    const dispatcher = dispatchers.find((c) => c.enabled);
-    const technician = technicians.find((t) => t.enabled);
+    const dispatcher = dispatchers?.find((c) => c.enabled);
+    const technician = technicians?.find((t) => t.enabled);
 
     const stateHistory: StatesHistory = {
       ticketId,

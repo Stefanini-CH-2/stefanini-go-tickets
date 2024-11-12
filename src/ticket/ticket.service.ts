@@ -425,48 +425,48 @@ export class TicketService {
     subcategoriesList,
     appointmentsList,
   ) {
-    const commerce = commercesList.find(
+    const commerce = commercesList?.find(
       (commerce) => commerce.id === ticket.commerceId,
     );
-    const branch = branchesList.find((branch) => branch.id === ticket.branchId);
-    const category = categoriesList.find(
+    const branch = branchesList?.find((branch) => branch.id === ticket.branchId);
+    const category = categoriesList?.find(
       (category) => category.id === ticket.categoryId,
     );
-    const subcategory = subcategoriesList.find(
+    const subcategory = subcategoriesList?.find(
       (subcategory) => subcategory.id === ticket.subcategoryId,
     );
 
-    const contacts = contactsList.filter(
+    const contacts = contactsList?.filter(
       (contact) => contact.commerceId === ticket.commerceId,
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
-      ? disptachersList.filter((disptacher) =>
-        ticket.dispatchers.map((c) => c.id)?.includes(disptacher.id),
+      ? disptachersList?.filter((disptacher) =>
+        ticket.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
       )
       : [];
     const technicians = Array.isArray(ticket.technicians)
-      ? techniciansList.filter((technician) =>
-        ticket.technicians.map((t) => t.id)?.includes(technician.id),
+      ? techniciansList?.filter((technician) =>
+        ticket.technicians?.map((t) => t.id)?.includes(technician.id),
       )
       : [];
 
     const statesHistory = statesHistoryList
-      .filter((history) => history.ticketId === ticket.id)
-      .sort(
+      ?.filter((history) => history.ticketId === ticket.id)
+      ?.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
 
-    const comments = commentsList.filter(
+    const comments = commentsList?.filter(
       (comment) => comment.ticketId === ticket.id,
     );
-    const evidences = evidencesList.filter(
+    const evidences = evidencesList?.filter(
       (evidence) => evidence.ticketId === ticket.id,
     );
-    const devices = devicesList.filter((device) =>
-      evidences.some((evidence) => evidence.id === device.evidenceId),
+    const devices = devicesList?.filter((device) =>
+      evidences?.some((evidence) => evidence.id === device.evidenceId),
     );
-    const appointments = appointmentsList.filter(
+    const appointments = appointmentsList?.filter(
       (appointment) => appointment.ticketId === ticket.id,
     );
 
@@ -512,8 +512,8 @@ export class TicketService {
 
     const comments = Utils.mapRecord(Comment, _comments);
 
-    const commentsWithEmployeeNames = comments.map((comment) => {
-      const employee = allEmployees.find(
+    const commentsWithEmployeeNames = comments?.map((comment) => {
+      const employee = allEmployees?.find(
         (emp) => emp?.id === comment?.employeeId,
       );
       return {
@@ -585,7 +585,7 @@ export class TicketService {
         email: disptacher?.email,
       })),
       technicians: ticket.technicians?.map((technician) => {
-        const technicianInfo = technicians.find(
+        const technicianInfo = technicians?.find(
           (tech) => tech?.id === technician?.id,
         );
         technicians;
@@ -638,23 +638,23 @@ export class TicketService {
 
     if (techniciansId?.length) {
       tickets = tickets
-        .map((ticket) => ({
+        ?.map((ticket) => ({
           ...ticket,
-          technicians: ticket.technicians.filter(
-            (tech) => tech.enabled && techniciansId.includes(tech.id),
+          technicians: ticket.technicians?.filter(
+            (tech) => tech.enabled && techniciansId?.includes(tech.id),
           ),
         }))
-        .filter((ticket) => ticket.technicians.length > 0);
+        ?.filter((ticket) => ticket.technicians.length > 0);
     }
 
     if (regions && regions.length > 0) {
-      tickets = tickets.filter((ticket) =>
-        regions.includes(ticket.branch.location.region),
+      tickets = tickets?.filter((ticket) =>
+        regions?.includes(ticket.branch.location.region),
       );
     }
 
     if (startDate && endDate) {
-      tickets = tickets.filter(
+      tickets = tickets?.filter(
         (ticket) =>
           ticket.ticket.createdAt >= startDate &&
           ticket.ticket.createdAt <= endDate,
@@ -668,15 +668,15 @@ export class TicketService {
     const uniqueCommercesMap = new Map();
     const uniqueTechniciansMap = new Map();
 
-    tickets.forEach((ticket) => {
+    tickets?.forEach((ticket) => {
       const commerce = ticket.commerce;
-      uniqueCommercesMap.set(commerce.id, commerce.name);
+      uniqueCommercesMap?.set(commerce.id, commerce.name);
     });
 
-    tickets.forEach((ticket) => {
+    tickets?.forEach((ticket) => {
       const technicians = ticket.technicians;
-      technicians.forEach((technician) => {
-        uniqueTechniciansMap.set(technician.id, technician.fullName);
+      technicians?.forEach((technician) => {
+        uniqueTechniciansMap?.set(technician.id, technician.fullName);
       });
     });
 
@@ -693,16 +693,16 @@ export class TicketService {
     const filtersSummary = {
       clients: clients,
       regions: [
-        ...new Set(tickets.map((ticket) => ticket.branch.location.region)),
+        ...new Set(tickets?.map((ticket) => ticket.branch.location.region)),
       ].map((region) => ({ name: region })),
       technicians: technicians,
     };
 
-    const newTickets = tickets.map((ticket) => ticket.ticket);
+    const newTickets = tickets?.map((ticket) => ticket.ticket);
 
-    const ticketStatuses = newTickets.reduce(
+    const ticketStatuses = newTickets?.reduce(
       (acc: Record<string, number>, { currentState }) => {
-        const _currentState = currentState.replace(' ', '');
+        const _currentState = currentState?.replace(' ', '');
         acc[_currentState] = (acc[_currentState] || 0) + 1;
         return acc;
       },
@@ -735,7 +735,7 @@ export class TicketService {
   transformTicketsByStatus(tickets: any[]): TicketsByStatus {
     const ticketsByStatus: TicketsByStatus = {};
 
-    tickets.forEach((ticket) => {
+    tickets?.forEach((ticket) => {
       const createdAt = new Date(ticket.ticket.createdAt).toISOString();
 
       const now = new Date().toISOString().split('T')[0];
@@ -782,7 +782,7 @@ export class TicketService {
     const dispatcher = await this.getEmployeeById(dispatcherId);
     if (!dispatcher) throw new NotFoundException('Despachador no encontrado');
 
-    const currentlyAssignedTechnician = ticket.technicians.find(
+    const currentlyAssignedTechnician = ticket.technicians?.find(
       (tech) => tech.id === technicianId && tech.enabled
     );
     if (currentlyAssignedTechnician) {
@@ -807,7 +807,7 @@ export class TicketService {
 
     // Actualizar técnicos
     const updatedTechnicians = [
-      ...ticket.technicians.map((tech) => {
+      ...ticket.technicians?.map((tech) => {
         if (tech.enabled) {
           return {
             ...tech,
@@ -857,13 +857,13 @@ export class TicketService {
     let technicianToUnassign;
 
     if (!technicianId) {
-      technicianToUnassign = ticket.technicians.find((tech) => tech.enabled);
+      technicianToUnassign = ticket.technicians?.find((tech) => tech.enabled);
       if (!technicianToUnassign) {
         return 'No hay técnicos asignados actualmente';
       }
       technicianId = technicianToUnassign.id;
     } else {
-      technicianToUnassign = ticket.technicians.find((tech) => tech.id === technicianId);
+      technicianToUnassign = ticket.technicians?.find((tech) => tech.id === technicianId);
       if (!technicianToUnassign) throw new NotFoundException('Técnico no encontrado en este ticket');
     }
 
@@ -888,7 +888,7 @@ export class TicketService {
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedTechnicians = ticket.technicians.map((tech) => {
+    const updatedTechnicians = ticket.technicians?.map((tech) => {
       if (tech.id === technicianId && tech.enabled) {
         return {
           ...tech,
@@ -928,7 +928,7 @@ export class TicketService {
     const newDispatcher = await this.getEmployeeById(newDispatcherId);
     if (!newDispatcher) throw new NotFoundException('Nuevo despachador no encontrado');
 
-    const currentlyAssignedDispatcher = ticket.dispatchers.find(
+    const currentlyAssignedDispatcher = ticket.dispatchers?.find(
       (dispatcher) => dispatcher.id === newDispatcherId && dispatcher.enabled
     );
     if (currentlyAssignedDispatcher) {
@@ -955,7 +955,7 @@ export class TicketService {
     const updatedAt = new Date().toISOString();
 
     const updatedDispatchers = [
-      ...ticket.dispatchers.map((dispatcher) => {
+      ...ticket.dispatchers?.map((dispatcher) => {
         if (dispatcher.enabled) {
           return {
             ...dispatcher,
@@ -977,7 +977,7 @@ export class TicketService {
       },
     ];
 
-    const updatedTechnicians = ticket.technicians.map((tech) => {
+    const updatedTechnicians = ticket.technicians?.map((tech) => {
       if (tech.enabled) {
         return {
           ...tech,
