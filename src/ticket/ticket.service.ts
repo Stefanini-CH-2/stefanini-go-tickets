@@ -169,7 +169,7 @@ export class TicketService {
       commercesId,
       branchesId,
       contactsId,
-      coordinatorsId,
+      disptachersId,
       techniciansId,
     } = this.mapFieldsIds(tickets);
 
@@ -180,7 +180,7 @@ export class TicketService {
       categoriesId,
       subcategoriesId,
       contactsId,
-      coordinatorsId,
+      disptachersId,
       techniciansId,
     });
 
@@ -201,8 +201,8 @@ export class TicketService {
         acc.commercesId?.push(ticket.commerceId);
         acc.branchesId?.push(ticket.branchId);
         acc.contactsId?.push(...ticket.contactsId);
-        acc.coordinatorsId?.push(
-          ...ticket.dispatchers.map((coordinator) => coordinator.id),
+        acc.disptachersId?.push(
+          ...ticket.dispatchers.map((disptacher) => disptacher.id),
         );
         acc.techniciansId?.push(
           ...ticket.technicians.map((technician) => technician.id),
@@ -216,7 +216,7 @@ export class TicketService {
         commercesId: [],
         branchesId: [],
         contactsId: [],
-        coordinatorsId: [],
+        disptachersId: [],
         techniciansId: [],
       },
     );
@@ -244,7 +244,7 @@ export class TicketService {
       commercesId,
       branchesId,
       contactsId,
-      coordinatorsId,
+      disptachersId,
       techniciansId,
     } = this.mapFieldsIds([ticket]);
 
@@ -255,7 +255,7 @@ export class TicketService {
       categoriesId,
       subcategoriesId,
       contactsId,
-      coordinatorsId,
+      disptachersId,
       techniciansId,
     });
 
@@ -271,7 +271,7 @@ export class TicketService {
       categoriesId,
       subcategoriesId,
       contactsId,
-      coordinatorsId,
+      disptachersId,
       techniciansId,
     },
   ) {
@@ -283,7 +283,7 @@ export class TicketService {
       categoriesList,
       subcategoriesList,
       contactsList,
-      coordinatorsList,
+      disptachersList,
       techniciansList,
       statesHistoryList,
       commentsList,
@@ -326,7 +326,7 @@ export class TicketService {
       this.databaseService.list(
         0,
         LIMIT,
-        { filters: { id: coordinatorsId } },
+        { filters: { id: disptachersId } },
         'employees',
       ),
       this.databaseService.list(
@@ -375,7 +375,7 @@ export class TicketService {
         commercesList,
         branchesList,
         contactsList,
-        coordinatorsList,
+        disptachersList,
         techniciansList,
         statesHistoryList,
         commentsList,
@@ -415,7 +415,7 @@ export class TicketService {
     commercesList,
     branchesList,
     contactsList,
-    coordinatorsList,
+    disptachersList,
     techniciansList,
     statesHistoryList,
     commentsList,
@@ -440,8 +440,8 @@ export class TicketService {
       (contact) => contact.commerceId === ticket.commerceId,
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
-      ? coordinatorsList.filter((coordinator) =>
-        ticket.dispatchers.map((c) => c.id)?.includes(coordinator.id),
+      ? disptachersList.filter((disptacher) =>
+        ticket.dispatchers.map((c) => c.id)?.includes(disptacher.id),
       )
       : [];
     const technicians = Array.isArray(ticket.technicians)
@@ -576,13 +576,13 @@ export class TicketService {
           position: contact?.position,
         })),
       },
-      dispatchers: dispatchers?.map((coordinator) => ({
-        id: coordinator?.id,
-        role: coordinator?.role,
-        rut: coordinator?.rut,
-        fullName: coordinator?.fullName,
-        phone: coordinator?.phone,
-        email: coordinator?.email,
+      dispatchers: dispatchers?.map((disptacher) => ({
+        id: disptacher?.id,
+        role: disptacher?.role,
+        rut: disptacher?.rut,
+        fullName: disptacher?.fullName,
+        phone: disptacher?.phone,
+        email: disptacher?.email,
       })),
       technicians: ticket.technicians?.map((technician) => {
         const technicianInfo = technicians.find(
@@ -666,7 +666,7 @@ export class TicketService {
     const ticketsByStatus = this.transformTicketsByStatus(tickets);
 
     const uniqueCommercesMap = new Map();
-    const uniqueTechnicalsMap = new Map();
+    const uniqueTechniciansMap = new Map();
 
     tickets.forEach((ticket) => {
       const commerce = ticket.commerce;
@@ -676,7 +676,7 @@ export class TicketService {
     tickets.forEach((ticket) => {
       const technicians = ticket.technicians;
       technicians.forEach((technician) => {
-        uniqueTechnicalsMap.set(technician.id, technician.fullName);
+        uniqueTechniciansMap.set(technician.id, technician.fullName);
       });
     });
 
@@ -685,7 +685,7 @@ export class TicketService {
       name,
     }));
 
-    const technicians = Array.from(uniqueTechnicalsMap, ([id, name]) => ({
+    const technicians = Array.from(uniqueTechniciansMap, ([id, name]) => ({
       id,
       name,
     }));
@@ -806,7 +806,7 @@ export class TicketService {
     const updatedAt = new Date().toISOString();
 
     // Actualizar técnicos
-    const updatedTechnicals = [
+    const updatedTechnicians = [
       ...ticket.technicians.map((tech) => {
         if (tech.enabled) {
           return {
@@ -830,7 +830,7 @@ export class TicketService {
     ];
 
     await this.updateTicketField(ticketId, {
-      technicians: updatedTechnicals,
+      technicians: updatedTechnicians,
       currentState: targetState,
       updatedAt,
     });
@@ -841,7 +841,7 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
-      updatedTechnicals
+      updatedTechnicians
     );
 
     return `El técnico ${technician.firstName} ${technician.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el despachador ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
@@ -888,7 +888,7 @@ export class TicketService {
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedTechnicals = ticket.technicians.map((tech) => {
+    const updatedTechnicians = ticket.technicians.map((tech) => {
       if (tech.id === technicianId && tech.enabled) {
         return {
           ...tech,
@@ -901,7 +901,7 @@ export class TicketService {
     });
 
     await this.updateTicketField(ticketId, {
-      technicians: updatedTechnicals,
+      technicians: updatedTechnicians,
       currentState: targetState,
       updatedAt: unassignedAt,
     });
@@ -912,7 +912,7 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
-      updatedTechnicals
+      updatedTechnicians
     );
 
     return `El técnico ${technicianToUnassign.name} ha sido desasignado exitosamente del ticket ${ticket.ticket_number} por el despachador ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
@@ -977,7 +977,7 @@ export class TicketService {
       },
     ];
 
-    const updatedTechnicals = ticket.technicians.map((tech) => {
+    const updatedTechnicians = ticket.technicians.map((tech) => {
       if (tech.enabled) {
         return {
           ...tech,
@@ -991,7 +991,7 @@ export class TicketService {
 
     await this.updateTicketField(ticketId, {
       dispatchers: updatedDispatchers,
-      technicians: updatedTechnicals,
+      technicians: updatedTechnicians,
       currentState: targetState,
       updatedAt,
     });
@@ -1002,7 +1002,17 @@ export class TicketService {
       ticket.currentState,
       targetState,
       updatedDispatchers,
-      updatedTechnicals
+      updatedTechnicians
+    );
+
+    const targetStateTechnicianUnassigned = 'technician_unassigned';
+    await this.stateMachine.recordStateChange(
+      ticket.commerceId,
+      ticketId,
+      ticket.currentState,
+      targetStateTechnicianUnassigned,
+      updatedDispatchers,
+      updatedTechnicians
     );
 
     return `El despachador ${newDispatcher.firstName} ${newDispatcher.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el despachador ${currentDispatcher.firstName} ${currentDispatcher.firstSurname}. Todos los técnicos asignados previamente han sido desasignados.`;
