@@ -45,22 +45,6 @@ export class TicketService {
   ) { }
 
   async create(tickets: Ticket | Ticket[]) {
-    const ticket = await this.databaseService.list(
-      0,
-      1,
-      { filters: { ticket_number: tickets['ticket_number'] } },
-      'tickets',
-    );
-
-    if (Array.isArray(ticket)) {
-      if (ticket.length > 0) {
-        throw new HttpException(
-          `${tickets['ticket_number']} already exists`,
-          400,
-        );
-      }
-    }
-
     const createdAt = new Date().toISOString();
     if (Array.isArray(tickets)) {
       const ticketWithIds = tickets.map((ticket) => ({
@@ -514,23 +498,30 @@ export class TicketService {
   }
 
   mapSuperTicket(
-    ticket,
-    commerce,
-    branch,
-    contacts,
-    dispatchers,
-    technicians,
-    statesHistory,
-    _comments,
-    _evidences,
-    _devices,
-    category,
-    subcategory,
-    appointments,
-    attentionType,
-    priority,
+    ticket: { id: any; ticket_number: any; description: any; createAt: any; updateAt: any; plannedDate: any; sla: any; numSla: any; dateSla: any; attentionType: any; createdAt: any; priority: any; currentState: any; technicals: any[]; },
+    commerce: { id: any; rut: any; name: any; observation: any; services: any; logoFileName: any; },
+    branch: { id: any; rut: any; address: any; city: any; region: any; commune: any; coords: { latitude: any; longitude: any; }; name: any; observation: any; },
+    contacts: any[],
+    coordinators: any[],
+    technicals: any[],
+    statesHistory: any[] | { items: any[]; lastEvaluatedKey?: Record<string, any>; },
+    _comments: any[] | { items: any[]; lastEvaluatedKey?: Record<string, any>; },
+    _evidences: any[] | { items: any[]; lastEvaluatedKey?: Record<string, any>; },
+    _devices: any,
+    category: { _id: any; },
+    subcategory: { _id: any; },
+    appointments: any,
+    attentionType: { values: any[]; },
+    priority: { values: any[]; },
   ) {
     const evidences = Utils.mapRecord(Evidence, _evidences);
+
+    const techApprovalId = evidences[0].approvals[0].userId;
+
+    const techApproval = technicals.find((tech) => tech.id === techApprovalId);
+
+    evidences[0].approvals[0].fullName = `${techApproval['firstName']} ${techApproval['firstSurname']}`;
+
     delete category?._id;
     delete subcategory?._id;
 
