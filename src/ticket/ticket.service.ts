@@ -498,12 +498,12 @@ export class TicketService {
   }
 
   mapSuperTicket(
-    ticket: { id: any; ticket_number: any; description: any; createAt: any; updateAt: any; plannedDate: any; sla: any; numSla: any; dateSla: any; attentionType: any; createdAt: any; priority: any; currentState: any; technicals: any[]; },
+    ticket: { id: any; ticket_number: any; description: any; createAt: any; updateAt: any; plannedDate: any; sla: any; numSla: any; dateSla: any; attentionType: any; createdAt: any; priority: any; currentState: any; technicians: any[]; },
     commerce: { id: any; rut: any; name: any; observation: any; services: any; logoFileName: any; },
     branch: { id: any; rut: any; address: any; city: any; region: any; commune: any; coords: { latitude: any; longitude: any; }; name: any; observation: any; },
     contacts: any[],
-    coordinators: any[],
-    technicals: any[],
+    dispatchers: any[],
+    technicians: any[],
     statesHistory: any[] | { items: any[]; lastEvaluatedKey?: Record<string, any>; },
     _comments: any[] | { items: any[]; lastEvaluatedKey?: Record<string, any>; },
     _evidences: any[] | { items: any[]; lastEvaluatedKey?: Record<string, any>; },
@@ -518,7 +518,7 @@ export class TicketService {
 
     const techApprovalId = evidences[0].approvals[0].userId;
 
-    const techApproval = technicals.find((tech) => tech.id === techApprovalId);
+    const techApproval = technicians?.find((tech) => tech.id === techApprovalId);
 
     evidences[0].approvals[0].fullName = `${techApproval['firstName']} ${techApproval['firstSurname']}`;
 
