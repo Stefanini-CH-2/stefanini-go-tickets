@@ -29,6 +29,9 @@ export class StateMachineService {
   }
 
   isTransitionAllowed(stateMachine: any, currentStateId: string, newStateId: string): boolean {
+    if(!currentStateId && newStateId === "created") {
+      return true;
+    }
     const machine = stateMachine || this.cachedStateMachine;
     if (!machine) throw new Error('No se ha cargado ninguna máquina de estados');
 
