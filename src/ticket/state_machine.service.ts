@@ -28,12 +28,12 @@ export class StateMachineService {
     return this.cachedStateMachine;
   }
 
-  isTransitionAllowed(stateMachine: any, currentState: string, newState: string): boolean {
+  isTransitionAllowed(stateMachine: any, currentStateId: string, newStateId: string): boolean {
     const machine = stateMachine || this.cachedStateMachine;
     if (!machine) throw new Error('No se ha cargado ninguna máquina de estados');
 
-    const state = machine.states?.find((s) => s.id === currentState);
-    return state ? state.transitions.includes(newState) : false;
+    const state = machine.states?.find((s) => s.id === currentStateId);
+    return state ? state.transitions?.includes(newStateId) : false;
   }
 
   async recordStateChange(commerceId: string, ticketId: string, fromState: string, toState: string, dispatchers: any[], technicians: any[]) {

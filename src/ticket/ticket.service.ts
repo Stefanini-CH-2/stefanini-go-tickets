@@ -79,6 +79,7 @@ export class TicketService {
         },
         this.collectionName,
       );
+      await this.updateState(id, "created");
       return [id];
     }
   }
@@ -130,20 +131,44 @@ export class TicketService {
 
     // Obtiene la máquina de estados usando el commerceId del ticket
     const stateMachine = await this.stateMachine.getStateMachine(ticket.commerceId);
-
+    const targetState = stateMachine?.states?.find(state => state.id === newState);
     // Verifica si la transición de estado es válida
-    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState, newState)) {
-      throw new BadRequestException(`Transición inválida de ${ticket.currentState} a ${newState}`);
+    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState?.id, targetState?.id) || !targetState) {
+      throw new BadRequestException(`Transición inválida de '${ticket.currentState?.label || ticket.currentState?.id || ticket.currentState}' a '${targetState?.label || targetState?.id || newState}'.`);
+    }
+
+    if (newState === 'in_service') {
+      const technicians = ticket.technicians?.filter(tech => tech.enabled) || [];
+      if (technicians.length === 0) {
+          throw new BadRequestException('No hay técnicos asignados al ticket.');
+      }
+
+      const technicianIds = technicians.map(tech => tech.id);
+
+      const busyTickets = await this.databaseService.list(0, 1, {
+          filters: {
+              'technicians.id': technicianIds,
+              'technicians.enabled': "true",
+              'currentState.id': 'in_service'
+          },
+          exclude: {
+            'id': ticketId,
+          }
+      }, this.collectionName);
+
+      if (Array.isArray(busyTickets) && busyTickets.length > 0) {
+        throw new ForbiddenException('El técnico asignado ya está atendiendo otro ticket.');
+      }
     }
 
     // Actualiza el estado del ticket
     const updatedAt = new Date().toISOString();
-    await this.updateTicketField(ticketId, { currentState: newState, updatedAt });
+    await this.updateTicketField(ticketId, { currentState: { id: targetState?.id, label: targetState?.label }, updatedAt });
 
     // Registra el cambio en el historial de estados
-    await this.stateMachine.recordStateChange(ticket.commerceId, ticketId, ticket.currentState, newState, ticket.dispatchers, ticket.technicians);
+    await this.stateMachine.recordStateChange(ticket.commerceId, ticketId, ticket.currentState?.id, targetState?.id, ticket.dispatchers, ticket.technicians);
 
-    return `Estado actualizado a ${newState} con éxito para el ticket ${ticket.ticket_number}`;
+    return `Estado actualizado a ${targetState?.label} con éxito para el ticket ${ticket.ticket_number}`;
   }
 
   async listFlows(page: number, limit: number, queryParams: QueryParams) {
@@ -702,7 +727,7 @@ export class TicketService {
 
     const ticketStatuses = newTickets?.reduce(
       (acc: Record<string, number>, { currentState }) => {
-        const _currentState = currentState?.replace(' ', '');
+        const _currentState = currentState?.id.replace(' ', '');
         acc[_currentState] = (acc[_currentState] || 0) + 1;
         return acc;
       },
@@ -748,7 +773,7 @@ export class TicketService {
         technician: ticket.technicians[0]?.fullName || 'N/A',
       };
 
-      if (ticket.ticket.currentState === 'Coordinado') {
+      if (ticket.ticket.currentState.id === 'coordinate') {
         transformedTicket.coordinatedAt = ticket.appointments[0]?.endDate;
         const coordinatedAt = new Date(transformedTicket.coordinatedAt).toISOString();
         const date1 = dayjs(coordinatedAt);
@@ -762,12 +787,12 @@ export class TicketService {
         }
       }
 
-      const currentState = ticket.ticket.currentState.replace(' ', '');
-      if (!ticketsByStatus[currentState]) {
-        ticketsByStatus[currentState] = [];
+      const currentStateId = ticket.ticket.currentState?.id?.replace(' ', '');
+      if (!ticketsByStatus[currentStateId]) {
+        ticketsByStatus[currentStateId] = [];
       }
 
-      ticketsByStatus[currentState].push(transformedTicket);
+      ticketsByStatus[currentStateId].push(transformedTicket);
     });
     return ticketsByStatus;
   }
@@ -796,10 +821,10 @@ export class TicketService {
 
     // Validación de transición en la máquina de estados
     const stateMachine = await this.stateMachine.getStateMachine(ticket.commerceId);
-    const targetState = 'technician_assigned';
-    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState, targetState)) {
+    const targetState = stateMachine?.states?.find(state => state.id === 'technician_assigned');
+    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState?.id, targetState?.id)) {
       throw new ForbiddenException(
-        `La transición de ${ticket.currentState} a ${targetState} no está permitida`
+        `La transición de ${ticket.currentState?.label} a ${targetState?.label} no está permitida`
       );
     }
 
@@ -831,15 +856,15 @@ export class TicketService {
 
     await this.updateTicketField(ticketId, {
       technicians: updatedTechnicians,
-      currentState: targetState,
+      currentState: { id: targetState.id, label: targetState.label },
       updatedAt,
     });
 
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState,
-      targetState,
+      ticket.currentState?.id,
+      targetState?.id,
       ticket.dispatchers,
       updatedTechnicians
     );
@@ -879,10 +904,10 @@ export class TicketService {
     }
 
     const stateMachine = await this.stateMachine.getStateMachine(ticket.commerceId);
-    const targetState = 'technician_unassigned';
-    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState, targetState)) {
+    const targetState = stateMachine?.states?.find(state => state.id === 'technician_unassigned');
+    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState?.id, targetState?.id)) {
       throw new ForbiddenException(
-        `La transición de ${ticket.currentState} a ${targetState} no está permitida`
+        `La transición de ${ticket.currentState?.label} a ${targetState?.label} no está permitida`
       );
     }
 
@@ -902,15 +927,15 @@ export class TicketService {
 
     await this.updateTicketField(ticketId, {
       technicians: updatedTechnicians,
-      currentState: targetState,
+      currentState: { id: targetState.id, label: targetState.label },
       updatedAt: unassignedAt,
     });
 
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState,
-      targetState,
+      ticket.currentState?.id,
+      targetState?.id,
       ticket.dispatchers,
       updatedTechnicians
     );
@@ -945,10 +970,10 @@ export class TicketService {
     }
 
     const stateMachine = await this.stateMachine.getStateMachine(ticket.commerceId);
-    const targetState = 'dispatcher_assigned';
-    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState, targetState)) {
+    const targetState = stateMachine?.states?.find(state => state.id === 'dispatcher_assigned');
+    if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState?.id, targetState?.id)) {
       throw new ForbiddenException(
-        `La transición de ${ticket.currentState} a ${targetState} no está permitida`
+        `La transición de ${ticket.currentState?.label} a ${targetState?.label} no está permitida`
       );
     }
 
@@ -992,25 +1017,25 @@ export class TicketService {
     await this.updateTicketField(ticketId, {
       dispatchers: updatedDispatchers,
       technicians: updatedTechnicians,
-      currentState: targetState,
+      currentState: { id: targetState?.id, label: targetState?.label },
       updatedAt,
     });
 
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState,
-      targetState,
+      ticket.currentState?.id,
+      targetState?.id,
       updatedDispatchers,
       updatedTechnicians
     );
 
-    const targetStateTechnicianUnassigned = 'technician_unassigned';
+    const targetStateTechnicianUnassigned = stateMachine?.states?.find(state => state.id === 'technician_unassigned');
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState,
-      targetStateTechnicianUnassigned,
+      ticket.currentState?.id,
+      targetStateTechnicianUnassigned?.id,
       updatedDispatchers,
       updatedTechnicians
     );
