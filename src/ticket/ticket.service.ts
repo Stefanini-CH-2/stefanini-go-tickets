@@ -18,6 +18,7 @@ import { Comment } from 'src/comment/dto/create-comment.dto';
 import { EmployeeRole, Provider } from './enums';
 import * as dayjs from 'dayjs';
 import { StateMachineService } from './state_machine.service';
+import { eventNames } from 'process';
 
 interface TransformedTicket {
   id: string;
@@ -516,11 +517,12 @@ export class TicketService {
   ) {
     const evidences = Utils.mapRecord(Evidence, _evidences);
 
-    const techApprovalId = evidences[0].approvals[0].userId;
+    const techApprovalId = evidences?.[0]?.approvals?.[0]?.userId;
 
     const techApproval = technicians?.find((tech) => tech.id === techApprovalId);
-
-    evidences[0].approvals[0].fullName = `${techApproval['firstName']} ${techApproval['firstSurname']}`;
+    if(evidences?.length > 0) {
+      evidences[0].approvals[0].fullName = `${techApproval['firstName']} ${techApproval['firstSurname']}`;
+    }
 
     delete category?._id;
     delete subcategory?._id;
