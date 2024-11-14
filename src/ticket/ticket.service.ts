@@ -599,7 +599,7 @@ export class TicketService {
         const dispatcherInfo = ticket.dispatchers?.find(disp => disp.id === disptacher?.id)
         return {
           id: dispatcherInfo.id || disptacher?.id,
-          role: dispatcherInfo.provider || disptacher?.role,
+          role: dispatcherInfo.role || disptacher?.role,
           provider: dispatcherInfo.provider || disptacher.provider,
           rut: disptacher?.rut,
           enabled: dispatcherInfo.enabled,
@@ -617,7 +617,7 @@ export class TicketService {
         technicians;
         return {
           id: technician?.id,
-          role: technicianInfo?.role,
+          role: technicianInfo?.role || technician.role,
           fullName:
             `${technicianInfo.firstName || ''} ${technicianInfo.secondName || ''} ${technicianInfo.firstSurname || ''} ${technicianInfo.secondSurname || ''}`
               .trim()
