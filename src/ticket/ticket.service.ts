@@ -601,6 +601,7 @@ export class TicketService {
         rut: disptacher?.rut,
         enabled: ticket.dispatchers?.filter(disp => disp.id === disptacher?.id).slice(-1)[0]?.enabled,
         fullName: `${disptacher?.firstName || ''} ${disptacher?.firstSurname || ''}`,
+        provider: disptacher?.provider,
         phone: disptacher?.phone,
         email: disptacher?.email,
       })),
