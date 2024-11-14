@@ -600,7 +600,7 @@ export class TicketService {
         role: disptacher?.role,
         rut: disptacher?.rut,
         enabled: ticket.dispatchers?.filter(disp => disp.id === disptacher?.id).slice(-1)[0]?.enabled,
-        fullName: disptacher?.fullName,
+        fullName: `${disptacher?.firstName || ''} ${disptacher?.firstSurname || ''}`,
         phone: disptacher?.phone,
         email: disptacher?.email,
       })),
