@@ -126,20 +126,20 @@ export class TicketService {
     if (newState === 'in_service') {
       const technicians = ticket.technicians?.filter(tech => tech.enabled) || [];
       if (technicians.length === 0) {
-          throw new BadRequestException('No hay técnicos asignados al ticket.');
+        throw new BadRequestException('No hay técnicos asignados al ticket.');
       }
 
       const technicianIds = technicians.map(tech => tech.id);
 
       const busyTickets = await this.databaseService.list(0, 1, {
-          filters: {
-              'technicians.id': technicianIds,
-              'technicians.enabled': "true",
-              'currentState.id': 'in_service'
-          },
-          exclude: {
-            'id': ticketId,
-          }
+        filters: {
+          'technicians.id': technicianIds,
+          'technicians.enabled': "true",
+          'currentState.id': 'in_service'
+        },
+        exclude: {
+          'id': ticketId,
+        }
       }, this.collectionName);
 
       if (Array.isArray(busyTickets) && busyTickets.length > 0) {
@@ -520,7 +520,7 @@ export class TicketService {
     const techApprovalId = evidences?.[0]?.approvals?.[0]?.userId;
 
     const techApproval = technicians?.find((tech) => tech.id === techApprovalId);
-    if(evidences?.length > 0) {
+    if (evidences?.length > 0) {
       evidences[0].approvals[0].fullName = `${techApproval['firstName']} ${techApproval['firstSurname']}`;
     }
 
@@ -599,6 +599,7 @@ export class TicketService {
         id: disptacher?.id,
         role: disptacher?.role,
         rut: disptacher?.rut,
+        enabled: disptacher?.enabled,
         fullName: disptacher?.fullName,
         phone: disptacher?.phone,
         email: disptacher?.email,
