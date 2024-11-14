@@ -65,7 +65,7 @@ export class StatesHistory {
 
     @IsString()
     @IsOptional()
-    technicalId: string;
+    technicianId: string;
 
     @ValidateNested()
     @Type(() => Location)
@@ -75,6 +75,10 @@ export class StatesHistory {
     @IsString()
     @IsNotEmpty()
     stateId: string;
+
+    @IsString()
+    @IsNotEmpty()
+    commerceId: string;
 
     @IsString()
     createdAt: string;

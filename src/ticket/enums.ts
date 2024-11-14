@@ -5,7 +5,7 @@ export enum EmployeeRole {
   }
   
   export enum Provider {
-    STEFANINI = 'Stefanini',
+    STEFANINI = 'stefanini',
     OTHER = 'OtherProvider',
   }
   

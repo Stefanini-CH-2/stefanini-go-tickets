@@ -25,23 +25,27 @@ import { Utils } from 'src/utils/utils';
 
 @Controller('tickets')
 export class TicketController {
-  constructor(private readonly ticketService: TicketService) {}
+  constructor(private readonly ticketService: TicketService) { }
 
   @Post()
   async create(@Body() tickets: Ticket) {
-    try {
-      return this.ticketService.create(tickets);
-    } catch (error) {
-      return error.message;
-    }
+
+    return this.ticketService.create(tickets);
+  }
+
+  @Put(':id/states/:newState')
+  async updateState(@Param('id') id: string, @Param('newState') newState: string) {
+
+    const result = await this.ticketService.updateState(id, newState);
+    return result;
   }
 
   @Get('/summaries')
   async summaries(
     @Query('commercesId', new ParseJsonPipe<string[]>(Array))
     commercesId: string[],
-    @Query('technicalsId', new ParseJsonPipe<string[]>(Array))
-    technicalsId: string[],
+    @Query('techniciansId', new ParseJsonPipe<string[]>(Array))
+    techniciansId: string[],
     @Query('regions', new ParseJsonPipe<string[]>(Array))
     regions: string[],
     @Query('startDate')
@@ -54,7 +58,7 @@ export class TicketController {
     return await this.ticketService.getSummary(
       commercesId,
       regions,
-      technicalsId,
+      techniciansId,
       startDate,
       endDate,
       ticketNumber,
@@ -63,10 +67,8 @@ export class TicketController {
 
   @Get(':id')
   async get(@Param('id') id: string) {
-    try {
-      const result = this.ticketService.get(id);
-      return plainToClass(Ticket, result);
-    } catch (error) {}
+    const result = this.ticketService.get(id);
+    return plainToClass(Ticket, result);
   }
 
   @Get()
@@ -82,48 +84,31 @@ export class TicketController {
     @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
     search: QuerySearch,
   ) {
-    try {
-      const queryParams: QueryParams = {
-        filters,
-        exclude,
-        fields,
-        sort,
-        search
-      };
-      const response = await this.ticketService.list(start, limit, queryParams);
-      response.records = Utils.mapRecord(Ticket, response.records);
-      return response;
-    } catch (error) {
-      return error.message;
-    }
+    const queryParams: QueryParams = {
+      filters,
+      exclude,
+      fields,
+      sort,
+      search
+    };
+    const response = await this.ticketService.list(start, limit, queryParams);
+    response.records = Utils.mapRecord(Ticket, response.records);
+    return response;
   }
 
   @Put(':id')
   update(@Param('id') id: string, @Body() updateTicketDto: UpdateTicketDto) {
-    try {
-      return this.ticketService.update(id, updateTicketDto);
-    } catch (error) {
-      return error.message;
-    }
+    return this.ticketService.update(id, updateTicketDto);
   }
 
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    try {
-      return await this.ticketService.delete(id);
-    } catch (error) {
-      return error.message;
-    }
+    return await this.ticketService.delete(id);
   }
 
   @Get(':id/flows')
   async flows(@Param('id') id: string) {
-    try {
-      return await this.ticketService.flows(id);
-    } catch (error) {
-      console.error(error);
-      return error.message;
-    }
+    return await this.ticketService.flows(id);
   }
 
   @Get('/flows/all')
@@ -139,62 +124,43 @@ export class TicketController {
     @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
     search: QuerySearch,
   ) {
-    try {
-      const queryParams: QueryParams = {
-        filters,
-        exclude,
-        fields,
-        sort,
-        search,
-      };
-      return await this.ticketService.listFlows(start, limit, queryParams);
-    } catch (error) {
-      return error.message;
-    }
+    const queryParams: QueryParams = {
+      filters,
+      exclude,
+      fields,
+      sort,
+      search,
+    };
+    return await this.ticketService.listFlows(start, limit, queryParams);
   }
 
   @Post(':id/technicians')
   async assignTechnician(@Param('id') id: string, @Body() body: any) {
-    try {
-      const {technicianId, dispatcherId} = body;
-      const result = await this.ticketService.assignTechnician(id, technicianId, dispatcherId);
-      return result;
-    } catch (error) {
-      return error.message;
-    }
+    const { technicianId, dispatcherId } = body;
+    const result = await this.ticketService.assignTechnician(id, technicianId, dispatcherId);
+    return result;
+
   }
 
   @Delete(':id/technicians')
-  async unassignTechnicians(@Param('id') id: string, @Body() body: any ) {
-    try {
-      const {technicianId, dispatcherId} = body;
-      const result = await this.ticketService.unassignTechnician(id, technicianId, dispatcherId);
-      return result;
-    } catch (error) {
-      return error.message;
-    }
+  async unassignTechnicians(@Param('id') id: string, @Body() body: any) {
+    const { technicianId, dispatcherId } = body;
+    const result = await this.ticketService.unassignTechnician(id, technicianId, dispatcherId);
+    return result;
   }
 
   @Post(':id/dispatchers')
   async assignDispatcher(@Param('id') id: string, @Body() body: any) {
-    try {
-      const {newDispatcherId, currentDispatcherId} = body;
-      const result = await this.ticketService.assignDispatcher(id, newDispatcherId, currentDispatcherId );
-      return result;
-    } catch (error) {
-      return error.message;
-    }
+    const { newDispatcherId, currentDispatcherId } = body;
+    const result = await this.ticketService.assignDispatcher(id, newDispatcherId, currentDispatcherId);
+    return result;
   }
 
   @Delete(':id/dispatchers')
-  async unassignDispatchers(@Param('id') id: string,  @Body() body: any) {
-    try {
-      const {dispatcherId} = body;
-      const result = await this.ticketService.unassignDispatcher(id, dispatcherId);
-      return result;
-    } catch (error) {
-      return error.message;
-    }
+  async unassignDispatchers(@Param('id') id: string, @Body() body: any) {
+    const { dispatcherId } = body;
+    const result = await this.ticketService.unassignDispatcher(id, dispatcherId);
+    return result;
   }
 }
 
