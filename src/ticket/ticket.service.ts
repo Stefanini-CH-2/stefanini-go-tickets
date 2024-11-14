@@ -611,7 +611,7 @@ export class TicketService {
         technicians;
         return {
           id: technician?.id,
-          role: technicianInfo?.role,
+          role: technicianInfo?.role || technician.role,
           fullName:
             `${technicianInfo.firstName || ''} ${technicianInfo.secondName || ''} ${technicianInfo.firstSurname || ''} ${technicianInfo.secondSurname || ''}`
               .trim()
@@ -619,6 +619,7 @@ export class TicketService {
           rut: technicianInfo.dniNumber || '',
           phone: technicianInfo?.phone,
           email: technicianInfo?.email,
+          provider: technicianInfo.provider || technician.provider,
           enabled: technician?.enabled,
           assignmentDate: technicianInfo?.assignmentDate,
         };
