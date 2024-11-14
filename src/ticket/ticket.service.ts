@@ -499,7 +499,7 @@ export class TicketService {
   }
 
   mapSuperTicket(
-    ticket: { id: any; ticket_number: any; description: any; createAt: any; updateAt: any; plannedDate: any; sla: any; numSla: any; dateSla: any; attentionType: any; createdAt: any; priority: any; currentState: any; technicians: any[]; },
+    ticket: { id: any; ticket_number: any; description: any; createAt: any; updateAt: any; plannedDate: any; sla: any; numSla: any; dateSla: any; attentionType: any; createdAt: any; priority: any; currentState: any; technicians: any[]; dispatchers: any[]; },
     commerce: { id: any; rut: any; name: any; observation: any; services: any; logoFileName: any; },
     branch: { id: any; rut: any; address: any; city: any; region: any; commune: any; coords: { latitude: any; longitude: any; }; name: any; observation: any; },
     contacts: any[],
@@ -599,7 +599,7 @@ export class TicketService {
         id: disptacher?.id,
         role: disptacher?.role,
         rut: disptacher?.rut,
-        enabled: disptacher?.enabled,
+        enabled: ticket.dispatchers?.find(disp => disp.id === disptacher?.id)?.enabled,
         fullName: disptacher?.fullName,
         phone: disptacher?.phone,
         email: disptacher?.email,
