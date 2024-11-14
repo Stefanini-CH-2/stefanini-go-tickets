@@ -595,21 +595,16 @@ export class TicketService {
           position: contact?.position,
         })),
       },
-      dispatchers: dispatchers?.map((disptacher) => {
-        const dispatcherInfo = ticket.dispatchers?.find(disp => disp.id === disptacher?.id)
-        return {
-          id: dispatcherInfo.id || disptacher?.id,
-          role: dispatcherInfo.role || disptacher?.role,
-          provider: dispatcherInfo.provider || disptacher.provider,
-          rut: disptacher?.rut,
-          enabled: dispatcherInfo.enabled,
-          fullName: dispatcherInfo.name ||  `${dispatcherInfo.firstName || ''} ${dispatcherInfo.secondName || ''} ${dispatcherInfo.firstSurname || ''} ${dispatcherInfo.secondSurname || ''}`
-          .trim()
-          .replace(/\s+/g, ' '),
-          phone: disptacher?.phone,
-          email: disptacher?.email
-        }
-      }),
+      dispatchers: dispatchers?.map((disptacher) => ({
+        id: disptacher?.id,
+        role: disptacher?.role,
+        rut: disptacher?.rut,
+        enabled: ticket.dispatchers?.filter(disp => disp.id === disptacher?.id).slice(-1)[0]?.enabled,
+        fullName: `${disptacher?.firstName || ''} ${disptacher?.firstSurname || ''}`,
+        provider: disptacher?.provider,
+        phone: disptacher?.phone,
+        email: disptacher?.email,
+      })),
       technicians: ticket.technicians?.map((technician) => {
         const technicianInfo = technicians?.find(
           (tech) => tech?.id === technician?.id,
