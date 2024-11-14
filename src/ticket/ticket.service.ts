@@ -599,7 +599,7 @@ export class TicketService {
         id: disptacher?.id,
         role: disptacher?.role,
         rut: disptacher?.rut,
-        enabled: ticket.dispatchers?.find(disp => disp.id === disptacher?.id)?.enabled,
+        enabled: ticket.dispatchers?.filter(disp => disp.id === disptacher?.id).slice(-1)[0]?.enabled,
         fullName: disptacher?.fullName,
         phone: disptacher?.phone,
         email: disptacher?.email,
