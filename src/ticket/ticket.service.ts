@@ -595,15 +595,21 @@ export class TicketService {
           position: contact?.position,
         })),
       },
-      dispatchers: dispatchers?.map((disptacher) => ({
-        id: disptacher?.id,
-        role: disptacher?.role,
-        rut: disptacher?.rut,
-        enabled: ticket.dispatchers?.find(disp => disp.id === disptacher?.id)?.enabled,
-        fullName: disptacher?.fullName,
-        phone: disptacher?.phone,
-        email: disptacher?.email,
-      })),
+      dispatchers: dispatchers?.map((disptacher) => {
+        const dispatcherInfo = ticket.dispatchers?.find(disp => disp.id === disptacher?.id)
+        return {
+          id: dispatcherInfo.id || disptacher?.id,
+          role: dispatcherInfo.provider || disptacher?.role,
+          provider: dispatcherInfo.provider || disptacher.provider,
+          rut: disptacher?.rut,
+          enabled: dispatcherInfo.enabled,
+          fullName: dispatcherInfo.name ||  `${dispatcherInfo.firstName || ''} ${dispatcherInfo.secondName || ''} ${dispatcherInfo.firstSurname || ''} ${dispatcherInfo.secondSurname || ''}`
+          .trim()
+          .replace(/\s+/g, ' '),
+          phone: disptacher?.phone,
+          email: disptacher?.email
+        }
+      }),
       technicians: ticket.technicians?.map((technician) => {
         const technicianInfo = technicians?.find(
           (tech) => tech?.id === technician?.id,
@@ -619,6 +625,7 @@ export class TicketService {
           rut: technicianInfo.dniNumber || '',
           phone: technicianInfo?.phone,
           email: technicianInfo?.email,
+          provider: technicianInfo.provider || technician.provider,
           enabled: technician?.enabled,
           assignmentDate: technicianInfo?.assignmentDate,
         };
