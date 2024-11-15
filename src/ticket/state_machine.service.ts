@@ -11,7 +11,7 @@ export class StateMachineService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateHistory: StatesHistoryService
-  ) {}
+  ) { }
 
   async getStateMachine(commerceId: string) {
     if (this.cachedStateMachine && this.cachedStateMachine.commerceId === commerceId) {
@@ -29,7 +29,7 @@ export class StateMachineService {
   }
 
   isTransitionAllowed(stateMachine: any, currentStateId: string, newStateId: string): boolean {
-    if(!currentStateId && newStateId === "created") {
+    if (!currentStateId && newStateId === "created") {
       return true;
     }
     const machine = stateMachine || this.cachedStateMachine;
@@ -48,7 +48,7 @@ export class StateMachineService {
       ticketId,
       stateId: toState,
       createdAt: updatedAt,
-      description: `Cambio de estado de ${fromState} a ${toState}`,
+      description: `Cambio de estado ${fromState} al técnico ${dispatchers[-2].fullName || ''} a ${toState} al tecnico ${technician?.fullName || ''} por el dispatcher ${dispatcher?.fullName || ''}`,
       commerceId: commerceId,
       dispatcherId: dispatcher ? dispatcher.id : null,
       technicianId: technician ? technician.id : null,
