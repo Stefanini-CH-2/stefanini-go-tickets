@@ -48,13 +48,13 @@ export class TicketService {
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
     if (Array.isArray(tickets)) {
-      const ticketWithIds = tickets.map((ticket) => ({
+      const ticketWithIds = tickets?.map((ticket) => ({
         id: uuidv4().toString(),
         ...ticket,
         createdAt,
       }));
       await this.databaseService.create(ticketWithIds, this.collectionName);
-      return ticketWithIds.map((ticket) => ticket.id);
+      return ticketWithIds?.map((ticket) => ticket.id);
     } else {
       const id = uuidv4().toString();
       await this.databaseService.create(
@@ -129,7 +129,7 @@ export class TicketService {
         throw new BadRequestException('No hay técnicos asignados al ticket.');
       }
 
-      const technicianIds = technicians.map(tech => tech.id);
+      const technicianIds = technicians?.map(tech => tech.id);
 
       const busyTickets = await this.databaseService.list(0, 1, {
         filters: {
@@ -183,7 +183,6 @@ export class TicketService {
       disptachersId,
       techniciansId,
     } = this.mapFieldsIds(tickets);
-
     const records = await this.processFlows(tickets, {
       ticketsId,
       commercesId,
@@ -213,10 +212,10 @@ export class TicketService {
         acc.branchesId?.push(ticket.branchId);
         acc.contactsId?.push(...ticket.contactsId);
         acc.disptachersId?.push(
-          ...ticket.dispatchers.map((disptacher) => disptacher.id),
+          ...ticket.dispatchers?.map((disptacher) => disptacher.id),
         );
         acc.techniciansId?.push(
-          ...ticket.technicians.map((technician) => technician.id),
+          ...ticket.technicians?.map((technician) => technician.id),
         );
         return acc;
       },
@@ -603,7 +602,7 @@ export class TicketService {
           provider: dispatcherInfo?.provider || disptacher?.provider,
           rut: disptacher?.rut,
           enabled: dispatcherInfo?.enabled,
-          fullName: dispatcherInfo?.name ||  `${dispatcherInfo?.firstName || ''} ${dispatcherInfo?.secondName || ''} ${dispatcherInfo?.firstSurname || ''} ${dispatcherInfo?.secondSurname || ''}`
+          fullName: dispatcherInfo?.name ||  `${disptacher?.firstName || ''} ${disptacher?.secondName || ''} ${disptacher?.firstSurname || ''} ${disptacher?.secondSurname || ''}`
           .trim()
           .replace(/\s+/g, ' '),
           phone: disptacher?.phone,
@@ -721,7 +720,7 @@ export class TicketService {
       clients: clients,
       regions: [
         ...new Set(tickets?.map((ticket) => ticket.branch.location.region)),
-      ].map((region) => ({ name: region })),
+      ]?.map((region) => ({ name: region })),
       technicians: technicians,
     };
 
@@ -1059,7 +1058,7 @@ export class TicketService {
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedDispatchers = ticket.dispatchers.map(dispatcher => {
+    const updatedDispatchers = ticket.dispatchers?.map(dispatcher => {
       if (dispatcher.id === dispatcherId && dispatcher.enabled) {
         return {
           ...dispatcher,
