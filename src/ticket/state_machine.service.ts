@@ -39,21 +39,57 @@ export class StateMachineService {
     return state ? state.transitions?.includes(newStateId) : false;
   }
 
-  async recordStateChange(commerceId: string, ticketId: string, fromState: string, toState: string, dispatchers: any[], technicians: any[]) {
+  async recordStateChange(
+    commerceId: string,
+    ticketId: string,
+    fromState: Record<string, string>,
+    toState: Record<string, string>,
+    dispatchers: { id: string; enabled: boolean; fullName: string }[],
+    technicians: { id: string; enabled: boolean; fullName: string }[]
+  ): Promise<void> {
     const updatedAt = new Date().toISOString();
-    const dispatcher = dispatchers?.find((c) => c.enabled);
-    const technician = technicians?.find((t) => t.enabled);
-
+  
+    const getEnabledUser = (users: { enabled: boolean; fullName?: string; id?: string }[] = []) =>
+      users.find(user => user.enabled) || null;
+  
+    const getLastTechnician = (techs: { enabled: boolean; fullName: string; id: string }[] = []) =>
+      techs.length > 1 ? techs[techs.length - 2] : null;
+  
+    const generateDescription = (
+      from: Record<string, string>,
+      to: Record<string, string>,
+      dispatcher: { fullName?: string } | null,
+      technician: { fullName?: string } | null,
+      lastTechnician: { fullName?: string } | null
+    ): string => {
+      if (to.id === "technician_assigned") {
+        return `Cambio de estado ${from?.label}${lastTechnician ? ` atendido por el técnico ${lastTechnician.fullName}` : ''} al estado ${to?.label} al técnico ${technician?.fullName || ''} por el dispatcher ${dispatcher?.fullName || ''}.`;
+      }
+      if (to.id === "created") {
+        return `El ticket fue creado por el dispatcher ${dispatcher?.fullName || ''}.`;
+      }
+      if (to.id !== "closed" && to.id !== "dispatcher_assigned") {
+        return `Cambio de estado ${from?.label} al estado ${to?.label}${technician ? ` por el técnico ${technician.fullName}` : ''}.`;
+      }
+      return `Cambio de estado ${from?.label} al estado ${to?.label}.`;
+    };
+  
+    const dispatcher = getEnabledUser(dispatchers);
+    const technician = getEnabledUser(technicians);
+    const lastTechnician = getLastTechnician(technicians);
+  
+    const description = generateDescription(fromState, toState, dispatcher, technician, lastTechnician);
+  
     const stateHistory: StatesHistory = {
       ticketId,
-      stateId: toState,
+      stateId: toState.id,
       createdAt: updatedAt,
-      description: `Cambio de estado ${fromState} al técnico ${dispatchers[-2].fullName || ''} a ${toState} al tecnico ${technician?.fullName || ''} por el dispatcher ${dispatcher?.fullName || ''}`,
-      commerceId: commerceId,
-      dispatcherId: dispatcher ? dispatcher.id : null,
-      technicianId: technician ? technician.id : null,
+      description,
+      commerceId,
+      dispatcherId: dispatcher?.id || null,
+      technicianId: technician?.id || null,
     };
-
+  
     await this.stateHistory.create(stateHistory, commerceId);
-  }
+  }  
 }

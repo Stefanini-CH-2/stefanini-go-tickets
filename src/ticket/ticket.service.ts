@@ -152,7 +152,7 @@ export class TicketService {
     await this.updateTicketField(ticketId, { currentState: { id: targetState?.id, label: targetState?.label }, updatedAt });
 
     // Registra el cambio en el historial de estados
-    await this.stateMachine.recordStateChange(ticket.commerceId, ticketId, ticket.currentState?.label, targetState?.label, ticket.dispatchers, ticket.technicians);
+    await this.stateMachine.recordStateChange(ticket.commerceId, ticketId, ticket.currentState, targetState, ticket.dispatchers, ticket.technicians);
 
     return `Estado actualizado a ${targetState?.label} con éxito para el ticket ${ticket.ticket_number}`;
   }
@@ -865,8 +865,8 @@ export class TicketService {
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState?.label,
-      targetState?.label,
+      ticket.currentState,
+      targetState,
       ticket.dispatchers,
       updatedTechnicians
     );
@@ -936,8 +936,8 @@ export class TicketService {
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState?.label,
-      targetState?.label,
+      ticket.currentState,
+      targetState,
       ticket.dispatchers,
       updatedTechnicians
     );
@@ -1026,8 +1026,8 @@ export class TicketService {
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState?.label,
-      targetState?.label,
+      ticket.currentState,
+      targetState,
       updatedDispatchers,
       updatedTechnicians
     );
@@ -1036,8 +1036,8 @@ export class TicketService {
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState?.label,
-      targetStateTechnicianUnassigned?.label,
+      ticket.currentState,
+      targetStateTechnicianUnassigned,
       updatedDispatchers,
       updatedTechnicians
     );
