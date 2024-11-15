@@ -598,12 +598,12 @@ export class TicketService {
       dispatchers: dispatchers?.map((disptacher) => {
         const dispatcherInfo = ticket.dispatchers?.find(disp => disp.id === disptacher?.id)
         return {
-          id: dispatcherInfo.id || disptacher?.id,
-          role: dispatcherInfo.role || disptacher?.role,
-          provider: dispatcherInfo.provider || disptacher.provider,
+          id: dispatcherInfo?.id || disptacher?.id,
+          role: dispatcherInfo?.role || disptacher?.role,
+          provider: dispatcherInfo?.provider || disptacher?.provider,
           rut: disptacher?.rut,
-          enabled: dispatcherInfo.enabled,
-          fullName: dispatcherInfo.name ||  `${dispatcherInfo.firstName || ''} ${dispatcherInfo.secondName || ''} ${dispatcherInfo.firstSurname || ''} ${dispatcherInfo.secondSurname || ''}`
+          enabled: dispatcherInfo?.enabled,
+          fullName: dispatcherInfo?.name ||  `${dispatcherInfo?.firstName || ''} ${dispatcherInfo?.secondName || ''} ${dispatcherInfo?.firstSurname || ''} ${dispatcherInfo?.secondSurname || ''}`
           .trim()
           .replace(/\s+/g, ' '),
           phone: disptacher?.phone,
@@ -703,7 +703,7 @@ export class TicketService {
     tickets?.forEach((ticket) => {
       const technicians = ticket.technicians;
       technicians?.forEach((technician) => {
-        uniqueTechniciansMap?.set(technician.id, technician.fullName);
+        uniqueTechniciansMap?.set(technician.id, technician?.fullName);
       });
     });
 
@@ -772,7 +772,7 @@ export class TicketService {
         createdAt,
         region: ticket.branch.location.region,
         comuna: ticket.branch.location.commune,
-        technician: ticket.technicians[0]?.fullName || 'N/A',
+        technician: ticket.technicians?.[0]?.fullName || 'N/A',
       };
 
       if (ticket.ticket.currentState.id === 'coordinate') {
