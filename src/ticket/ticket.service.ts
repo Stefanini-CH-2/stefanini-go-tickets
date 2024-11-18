@@ -48,13 +48,13 @@ export class TicketService {
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
     if (Array.isArray(tickets)) {
-      const ticketWithIds = tickets.map((ticket) => ({
+      const ticketWithIds = tickets?.map((ticket) => ({
         id: uuidv4().toString(),
         ...ticket,
         createdAt,
       }));
       await this.databaseService.create(ticketWithIds, this.collectionName);
-      return ticketWithIds.map((ticket) => ticket.id);
+      return ticketWithIds?.map((ticket) => ticket.id);
     } else {
       const id = uuidv4().toString();
       await this.databaseService.create(
@@ -129,7 +129,7 @@ export class TicketService {
         throw new BadRequestException('No hay técnicos asignados al ticket.');
       }
 
-      const technicianIds = technicians.map(tech => tech.id);
+      const technicianIds = technicians?.map(tech => tech.id);
 
       const busyTickets = await this.databaseService.list(0, 1, {
         filters: {
@@ -152,7 +152,7 @@ export class TicketService {
     await this.updateTicketField(ticketId, { currentState: { id: targetState?.id, label: targetState?.label }, updatedAt });
 
     // Registra el cambio en el historial de estados
-    await this.stateMachine.recordStateChange(ticket.commerceId, ticketId, ticket.currentState?.id, targetState?.id, ticket.dispatchers, ticket.technicians);
+    await this.stateMachine.recordStateChange(ticket.commerceId, ticketId, ticket.currentState, targetState, ticket.dispatchers, ticket.technicians);
 
     return `Estado actualizado a ${targetState?.label} con éxito para el ticket ${ticket.ticket_number}`;
   }
@@ -183,7 +183,6 @@ export class TicketService {
       disptachersId,
       techniciansId,
     } = this.mapFieldsIds(tickets);
-
     const records = await this.processFlows(tickets, {
       ticketsId,
       commercesId,
@@ -213,10 +212,10 @@ export class TicketService {
         acc.branchesId?.push(ticket.branchId);
         acc.contactsId?.push(...ticket.contactsId);
         acc.disptachersId?.push(
-          ...ticket.dispatchers.map((disptacher) => disptacher.id),
+          ...ticket.dispatchers?.map((disptacher) => disptacher.id),
         );
         acc.techniciansId?.push(
-          ...ticket.technicians.map((technician) => technician.id),
+          ...ticket.technicians?.map((technician) => technician.id),
         );
         return acc;
       },
@@ -595,16 +594,21 @@ export class TicketService {
           position: contact?.position,
         })),
       },
-      dispatchers: dispatchers?.map((disptacher) => ({
-        id: disptacher?.id,
-        role: disptacher?.role,
-        rut: disptacher?.rut,
-        enabled: ticket.dispatchers?.filter(disp => disp.id === disptacher?.id).slice(-1)[0]?.enabled,
-        fullName: `${disptacher?.firstName || ''} ${disptacher?.firstSurname || ''}`,
-        provider: disptacher?.provider,
-        phone: disptacher?.phone,
-        email: disptacher?.email,
-      })),
+      dispatchers: dispatchers?.map((disptacher) => {
+        const dispatcherInfo = ticket.dispatchers?.find(disp => disp.id === disptacher?.id)
+        return {
+          id: dispatcherInfo?.id || disptacher?.id,
+          role: dispatcherInfo?.role || disptacher?.role,
+          provider: dispatcherInfo?.provider || disptacher?.provider,
+          rut: disptacher?.rut,
+          enabled: dispatcherInfo?.enabled,
+          fullName: dispatcherInfo?.name ||  `${disptacher?.firstName || ''} ${disptacher?.secondName || ''} ${disptacher?.firstSurname || ''} ${disptacher?.secondSurname || ''}`
+          .trim()
+          .replace(/\s+/g, ' '),
+          phone: disptacher?.phone,
+          email: disptacher?.email
+        }
+      }),
       technicians: ticket.technicians?.map((technician) => {
         const technicianInfo = technicians?.find(
           (tech) => tech?.id === technician?.id,
@@ -698,7 +702,7 @@ export class TicketService {
     tickets?.forEach((ticket) => {
       const technicians = ticket.technicians;
       technicians?.forEach((technician) => {
-        uniqueTechniciansMap?.set(technician.id, technician.fullName);
+        uniqueTechniciansMap?.set(technician.id, technician?.fullName);
       });
     });
 
@@ -716,7 +720,7 @@ export class TicketService {
       clients: clients,
       regions: [
         ...new Set(tickets?.map((ticket) => ticket.branch.location.region)),
-      ].map((region) => ({ name: region })),
+      ]?.map((region) => ({ name: region })),
       technicians: technicians,
     };
 
@@ -767,7 +771,7 @@ export class TicketService {
         createdAt,
         region: ticket.branch.location.region,
         comuna: ticket.branch.location.commune,
-        technician: ticket.technicians[0]?.fullName || 'N/A',
+        technician: ticket.technicians?.[0]?.fullName || 'N/A',
       };
 
       if (ticket.ticket.currentState.id === 'coordinate') {
@@ -802,7 +806,7 @@ export class TicketService {
     if (!technician) throw new NotFoundException('Técnico no encontrado');
 
     const dispatcher = await this.getEmployeeById(dispatcherId);
-    if (!dispatcher) throw new NotFoundException('Despachador no encontrado');
+    if (!dispatcher) throw new NotFoundException('Dispatcher no encontrado');
 
     const currentlyAssignedTechnician = ticket.technicians?.find(
       (tech) => tech.id === technicianId && tech.enabled
@@ -813,7 +817,7 @@ export class TicketService {
 
     // Validación de permisos
     if (dispatcher.role !== EmployeeRole.ADMIN && dispatcher.provider !== technician.provider) {
-      throw new ForbiddenException('Los despachadores solo pueden asignar técnicos de su propio proveedor');
+      throw new ForbiddenException('Los dispatchers solo pueden asignar técnicos de su propio proveedor');
     }
 
     // Validación de transición en la máquina de estados
@@ -860,13 +864,13 @@ export class TicketService {
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState?.id,
-      targetState?.id,
+      ticket.currentState,
+      targetState,
       ticket.dispatchers,
       updatedTechnicians
     );
 
-    return `El técnico ${technician.firstName} ${technician.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el despachador ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
+    return `El técnico ${technician.firstName} ${technician.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el dispatchers ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
   }
 
   async unassignTechnician(ticketId: string, technicianId: string | null, dispatcherId: string) {
@@ -874,7 +878,7 @@ export class TicketService {
     if (!ticket) throw new NotFoundException('Ticket no encontrado');
 
     const dispatcher = await this.getEmployeeById(dispatcherId);
-    if (!dispatcher) throw new NotFoundException('Despachador no encontrado');
+    if (!dispatcher) throw new NotFoundException('Dispatchers no encontrado');
 
     let technicianToUnassign;
 
@@ -931,41 +935,44 @@ export class TicketService {
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState?.id,
-      targetState?.id,
+      ticket.currentState,
+      targetState,
       ticket.dispatchers,
       updatedTechnicians
     );
 
-    return `El técnico ${technicianToUnassign.name} ha sido desasignado exitosamente del ticket ${ticket.ticket_number} por el despachador ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
+    return `El técnico ${technicianToUnassign.name} ha sido desasignado exitosamente del ticket ${ticket.ticket_number} por el dispatchers ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
   }
 
   async assignDispatcher(ticketId: string, newDispatcherId: string, currentDispatcherId: string) {
     const ticket = await this.getTicketById(ticketId);
     if (!ticket) throw new NotFoundException('Ticket no encontrado');
-
+  
     const currentDispatcher = await this.getEmployeeById(currentDispatcherId);
-    if (!currentDispatcher) throw new NotFoundException('Despachador actual no encontrado');
-
+    if (!currentDispatcher) throw new NotFoundException('Dispatcher actual no encontrado');
+  
     const newDispatcher = await this.getEmployeeById(newDispatcherId);
-    if (!newDispatcher) throw new NotFoundException('Nuevo despachador no encontrado');
-
+    if (!newDispatcher) throw new NotFoundException('Nuevo dispatcher no encontrado');
+  
     const currentlyAssignedDispatcher = ticket.dispatchers?.find(
       (dispatcher) => dispatcher.id === newDispatcherId && dispatcher.enabled
     );
     if (currentlyAssignedDispatcher) {
-      throw new ConflictException(`El despachador ${currentlyAssignedDispatcher.name} ya está asignado al ticket ${ticket.ticket_number}.`);
+      throw new ConflictException(`El dispatcher ${currentlyAssignedDispatcher.name} ya está asignado al ticket ${ticket.ticket_number}.`);
     }
-
-    if (
-      currentDispatcher.role !== EmployeeRole.ADMIN &&
-      newDispatcher.provider !== Provider.STEFANINI
-    ) {
-      throw new ForbiddenException(
-        'Los despachadores de otros proveedores solo pueden asignar a despachadores de Stefanini'
-      );
+  
+    if (currentDispatcher.provider === Provider.STEFANINI) {
+      if (currentDispatcher.role !== EmployeeRole.ADMIN && currentDispatcher.role !== EmployeeRole.DISPATCHER) {
+        throw new ForbiddenException('Solo los administradores o dispatchers de Stefanini pueden asignar dispatchers proveedores.');
+      }
+    } else {
+      if (newDispatcher.provider !== currentDispatcher.provider && newDispatcher.provider !== Provider.STEFANINI) {
+        throw new ForbiddenException(
+          'Los dispatchers de otros proveedores solo pueden asignar a dispatchers de su mismo proveedor o de Stefanini.'
+        );
+      }
     }
-
+  
     const stateMachine = await this.stateMachine.getStateMachine(ticket.commerceId);
     const targetState = stateMachine?.states?.find(state => state.id === 'dispatcher_assigned');
     if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState?.id, targetState?.id)) {
@@ -973,9 +980,9 @@ export class TicketService {
         `La transición de ${ticket.currentState?.label} a ${targetState?.label} no está permitida`
       );
     }
-
+  
     const updatedAt = new Date().toISOString();
-
+  
     const updatedDispatchers = [
       ...ticket.dispatchers?.map((dispatcher) => {
         if (dispatcher.enabled) {
@@ -998,7 +1005,7 @@ export class TicketService {
         enabled: true,
       },
     ];
-
+  
     const updatedTechnicians = ticket.technicians?.map((tech) => {
       if (tech.enabled) {
         return {
@@ -1010,35 +1017,36 @@ export class TicketService {
       }
       return tech;
     });
-
+  
     await this.updateTicketField(ticketId, {
       dispatchers: updatedDispatchers,
       technicians: updatedTechnicians,
       currentState: { id: targetState?.id, label: targetState?.label },
       updatedAt,
     });
-
+  
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState?.id,
-      targetState?.id,
+      ticket.currentState,
+      targetState,
       updatedDispatchers,
       updatedTechnicians
     );
-
+  
     const targetStateTechnicianUnassigned = stateMachine?.states?.find(state => state.id === 'technician_unassigned');
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
       ticketId,
-      ticket.currentState?.id,
-      targetStateTechnicianUnassigned?.id,
+      ticket.currentState,
+      targetStateTechnicianUnassigned,
       updatedDispatchers,
       updatedTechnicians
     );
-
-    return `El despachador ${newDispatcher.firstName} ${newDispatcher.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el despachador ${currentDispatcher.firstName} ${currentDispatcher.firstSurname}. Todos los técnicos asignados previamente han sido desasignados.`;
+  
+    return `El dispatcher ${newDispatcher.firstName} ${newDispatcher.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el dispatcher ${currentDispatcher.firstName} ${currentDispatcher.firstSurname}. Todos los técnicos asignados previamente han sido desasignados.`;
   }
+  
 
 
   async unassignDispatcher(ticketId: string, dispatcherId: string) {
@@ -1054,7 +1062,7 @@ export class TicketService {
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedDispatchers = ticket.dispatchers.map(dispatcher => {
+    const updatedDispatchers = ticket.dispatchers?.map(dispatcher => {
       if (dispatcher.id === dispatcherId && dispatcher.enabled) {
         return {
           ...dispatcher,
