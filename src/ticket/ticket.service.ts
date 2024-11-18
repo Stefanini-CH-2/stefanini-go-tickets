@@ -46,18 +46,17 @@ export class TicketService {
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
-  
     const mapTechniciansAndDispatchers = async (ticket) => {
       const technicians = await Promise.all(
-        ticket.technicians.map((tech) => this.getEmployeeById(tech.id))
+        ticket.technicians?.map((tech) => this.getEmployeeById(tech?.id))
       );
       const dispatchers = await Promise.all(
-        ticket.dispatchers.map((disp) => this.getEmployeeById(disp.id))
+        ticket.dispatchers?.map((disp) => this.getEmployeeById(disp?.id))
       );
   
       return {
         ...ticket,
-        technicians: technicians.map((tech) => ({
+        technicians: technicians?.map((tech) => ({
           id: tech.id,
           role: tech.role,
           name: `${tech.firstName} ${tech.firstSurname}`.trim(),
@@ -66,7 +65,7 @@ export class TicketService {
           email: tech.email,
           enabled: true,
         })),
-        dispatchers: dispatchers.map((disp) => ({
+        dispatchers: dispatchers?.map((disp) => ({
           id: disp.id,
           role: disp.role,
           name: `${disp.firstName} ${disp.firstSurname}`.trim(),
@@ -96,6 +95,9 @@ export class TicketService {
         this.collectionName
       );
       await this.updateState(id, 'created');
+      if (ticketWithDetails.technicians?.some((tech) => tech.enabled)) {
+        await this.updateState(id, 'technician_assigned');
+      }
       return [id];
     }
   }  
@@ -147,7 +149,6 @@ export class TicketService {
 
     const stateMachine = await this.stateMachine.getStateMachine(ticket.commerceId);
     const targetState = stateMachine?.states?.find(state => state.id === newState);
- 
     if (!this.stateMachine.isTransitionAllowed(stateMachine, ticket.currentState?.id, targetState?.id) || !targetState) {
       throw new BadRequestException(`Transición inválida de '${ticket.currentState?.label || ticket.currentState?.id || ticket.currentState}' a '${targetState?.label || targetState?.id || newState}'.`);
     }
