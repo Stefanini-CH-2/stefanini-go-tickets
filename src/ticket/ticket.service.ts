@@ -95,6 +95,9 @@ export class TicketService {
         this.collectionName
       );
       await this.updateState(id, 'created');
+      if (ticketWithDetails.dispatcher?.some((disp) => disp.enabled)) {
+        await this.updateState(id, 'dispatcher_assigned');
+      }
       if (ticketWithDetails.technicians?.some((tech) => tech.enabled)) {
         await this.updateState(id, 'technician_assigned');
       }
