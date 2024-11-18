@@ -12,5 +12,6 @@ import { DatabaseModule } from 'stefaninigo';
   ],
   controllers: [StatesHistoryController],
   providers: [StatesHistoryService],
+  exports: [StatesHistoryService],
 })
 export class StatesHistoryModule {}

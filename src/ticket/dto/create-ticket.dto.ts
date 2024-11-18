@@ -9,7 +9,7 @@ import {
     ValidateNested,
 } from 'class-validator';
 
-class CoordinatorOrTechnical {
+class DisptacherOrTechnician {
     @IsString()
     @IsNotEmpty()
     id: string;
@@ -75,15 +75,15 @@ export class Ticket {
 
     @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => CoordinatorOrTechnical)
+    @Type(() => DisptacherOrTechnician)
     @IsNotEmpty()
-    coordinators: CoordinatorOrTechnical[];
+    dispatchers: DisptacherOrTechnician[];
 
     @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => CoordinatorOrTechnical)
+    @Type(() => DisptacherOrTechnician)
     @IsOptional()
-    technicals: CoordinatorOrTechnical[];
+    technicians: DisptacherOrTechnician[];
 
     @Exclude()
     _id: string;

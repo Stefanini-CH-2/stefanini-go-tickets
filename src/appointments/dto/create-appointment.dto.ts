@@ -26,7 +26,7 @@ export class Appointment {
 
     @IsString()
     @IsNotEmpty()
-    technicalId: string;
+    technicianId: string;
   
     @IsString()
     @IsNotEmpty()

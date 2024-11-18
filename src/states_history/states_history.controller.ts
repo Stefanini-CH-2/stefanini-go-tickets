@@ -14,7 +14,7 @@ export class StatesHistoryController {
   @Post()
   async create(@Body() statesHistorys: StatesHistory) {
     try {
-      return this.statesHistoryService.create(statesHistorys);
+      return this.statesHistoryService.create(statesHistorys, statesHistorys.commerceId);
     } catch (error) {
       return error.message;
     }

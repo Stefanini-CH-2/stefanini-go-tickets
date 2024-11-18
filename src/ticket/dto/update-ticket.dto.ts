@@ -4,7 +4,7 @@ import { IsString } from 'class-validator';
 
 export class UpdateTicketDto extends PartialType(Ticket) {
     @IsString()
-    currentState: string;
+    currentState: Record<string,string>;
 
     @IsString()
     updatedAt: string;
