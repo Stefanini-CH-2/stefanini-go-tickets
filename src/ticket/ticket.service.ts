@@ -17,7 +17,7 @@ import { Comment } from 'src/comment/dto/create-comment.dto';
 import { EmployeeRole, Provider } from './enums';
 import * as dayjs from 'dayjs';
 import { StateMachineService } from './state_machine.service';
-import { eventNames } from 'process';
+import { NewStateTicketDto } from './dto/newstate-ticket.dto';
 
 interface TransformedTicket {
   id: string;
@@ -145,7 +145,7 @@ export class TicketService {
     };
   }
 
-  async updateState(ticketId: string, newState: string, updateTicket?: UpdateTicketDto): Promise<any> {
+  async updateState(ticketId: string, newState: string, newStateTicket?: NewStateTicketDto): Promise<any> {
     const ticket = await this.getTicketById(ticketId);
     if (!ticket) throw new NotFoundException('Ticket no encontrado');
 
@@ -201,9 +201,9 @@ export class TicketService {
     }
 
     if (newState === 'coordinate') {
-      if (updateTicket) {
-        ticket.coordinatedDate = updateTicket.coordinatedDate;
-        const contact = await this.databaseService.get(updateTicket.coordinatedContactId, 'contacts')
+      if (newStateTicket) {
+        ticket.coordinatedDate = newStateTicket?.customs?.coordinatedDate;
+        const contact = await this.databaseService.get(newStateTicket?.customs?.coordinatedContactId, 'contacts')
         if (!contact) throw new NotFoundException('Contact no encontrado');
         ticket.coordinatedContactId = contact.id;
       }
@@ -216,8 +216,6 @@ export class TicketService {
       coordinatedDate: ticket.coordinatedDate || null,
       updatedAt,
     });
-
-
 
     await this.stateMachine.recordStateChange(
       ticket.commerceId,
