@@ -827,7 +827,13 @@ export class TicketService {
     tickets?.forEach((ticket) => {
       const technicians = ticket.technicians;
       technicians?.forEach((technician) => {
-        uniqueTechniciansMap?.set(technician.id, technician?.fullName);
+        uniqueTechniciansMap?.set(technician.id,  {
+          id: technician.id,
+          fullName: technician.fullName,
+          provider: technician.provider,
+          role: technician.role,
+          enabled: technician.enabled,
+        });
       });
     });
 
@@ -836,7 +842,7 @@ export class TicketService {
       name,
     }));
 
-    const technicians = Array.from(uniqueTechniciansMap);
+    const technicians = Array.from(uniqueTechniciansMap.values());
 
     const filtersSummary = {
       clients: clients,
