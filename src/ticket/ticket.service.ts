@@ -199,21 +199,24 @@ export class TicketService {
         );
       }
     }
-
+    const updatedAt = new Date().toISOString();
     if (newState === 'coordinate') {
       if (newStateTicket) {
-        ticket.coordinatedDate = newStateTicket?.customs?.coordinatedDate;
-        const contact = await this.databaseService.get(newStateTicket?.customs?.coordinatedContactId, 'contacts')
-        if (!contact) throw new NotFoundException('Contact no encontrado');
+        if (!newStateTicket?.customs?.coordinatedDate) throw new NotFoundException('Para coordinar debes enviar una fecha de coordinación.');
+        ticket.coordinatedDate = newStateTicket.customs.coordinatedDate;
+        const contact = await this.databaseService.get(ticket.coordinatedDate, 'contacts')
+        if (!contact) throw new NotFoundException('Contacto no encontrado');
         ticket.coordinatedContactId = contact.id;
+        await this.updateTicketField(ticketId, {
+          coordinatedContactId: ticket?.coordinatedContactId,
+          coordinatedDate: ticket?.coordinatedDate,
+        });
       }
     }
 
-    const updatedAt = new Date().toISOString();
+    
     await this.updateTicketField(ticketId, {
       currentState: { id: targetState?.id, label: targetState?.label },
-      coordinatedContactId: ticket.coordinatedContactId || null,
-      coordinatedDate: ticket.coordinatedDate || null,
       updatedAt,
     });
 
@@ -639,11 +642,6 @@ export class TicketService {
       evidences[0].approvals[0].fullName = `${techApproval['firstName']} ${techApproval['firstSurname']}`;
     }
 
-
-    const coordinatedContact = ticket.coordinatedContactId ? contacts?.find(
-      (contact) => contact.id === ticket.coordinatedContactId,
-    ) : null;
-
     delete category?._id;
     delete subcategory?._id;
 
@@ -670,8 +668,8 @@ export class TicketService {
         createAt: ticket?.createAt,
         updateAt: ticket?.updateAt,
         plannedDate: ticket?.plannedDate,
-        coordinatedDate: ticket?.coordinatedDate || null,
-        coordinatedContactId: coordinatedContact || null,
+        coordinatedDate: ticket?.coordinatedDate,
+        coordinatedContactId: ticket?.coordinatedContactId,
         sla: ticket?.sla,
         numSla: ticket?.numSla,
         dateSla: ticket?.dateSla,
@@ -843,7 +841,7 @@ export class TicketService {
     const filtersSummary = {
       clients: clients,
       regions: [
-        ...new Set(tickets?.map((ticket) => ticket.branch.location.region)),
+        ...new Set(tickets?.map((ticket) => ticket.branch?.location?.region)),
       ]?.map((region) => ({ name: region })),
       technicians: technicians,
     };
@@ -895,14 +893,17 @@ export class TicketService {
         createdAt,
         region: ticket.branch.location.region,
         comuna: ticket.branch.location.commune,
+        coordinatedAt: ticket.ticket?.coordinatedDate,
         technician: ticket.technicians?.[0]?.fullName || 'N/A',
       };
 
       if (ticket.ticket.currentState.id === 'coordinate') {
-        transformedTicket.coordinatedAt = ticket.appointments[0]?.endDate;
-        const coordinatedAt = new Date(
+        if(!transformedTicket.coordinatedAt){
+          transformedTicket.coordinatedAt = ticket.appointments?.[0]?.endDate;
+        }
+        const coordinatedAt = transformedTicket.coordinatedAt ? new Date(
           transformedTicket.coordinatedAt,
-        ).toISOString();
+        ).toISOString() : null;
         const date1 = dayjs(coordinatedAt);
         const date2 = dayjs(now);
         if (date1.isAfter(date2)) {
