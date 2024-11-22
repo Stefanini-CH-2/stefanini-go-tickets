@@ -53,7 +53,7 @@ export class TicketService {
       const dispatchers = await Promise.all(
         ticket.dispatchers?.map((disp) => this.getEmployeeById(disp?.id))
       );
-  
+  console.log(technicians, dispatchers)
       return {
         ...ticket,
         technicians: technicians?.map((tech) => ({
@@ -742,10 +742,7 @@ export class TicketService {
       name,
     }));
 
-    const technicians = Array.from(uniqueTechniciansMap, ([id, name]) => ({
-      id,
-      name,
-    }));
+    const technicians = Array.from(uniqueTechniciansMap);
 
     const filtersSummary = {
       clients: clients,
