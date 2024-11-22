@@ -1,8 +1,8 @@
 import {
-    IsString,
+    IsObject
 } from 'class-validator';
 
 export class NewStateTicketDto {
-    @IsString()
+    @IsObject()
     customs?: Record<string, any>;
 }
