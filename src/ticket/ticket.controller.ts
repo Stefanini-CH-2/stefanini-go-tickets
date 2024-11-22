@@ -34,9 +34,13 @@ export class TicketController {
   }
 
   @Put(':id/states/:newState')
-  async updateState(@Param('id') id: string, @Param('newState') newState: string) {
+  async updateState(
+    @Param('id') id: string,
+    @Param('newState') newState: string,
+    @Body() ticket?: UpdateTicketDto
+  ) {
 
-    const result = await this.ticketService.updateState(id, newState);
+    const result = await this.ticketService.updateState(id, newState, ticket);
     return result;
   }
 
