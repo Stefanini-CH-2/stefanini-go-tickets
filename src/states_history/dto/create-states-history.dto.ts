@@ -81,6 +81,14 @@ export class StatesHistory {
     commerceId: string;
 
     @IsString()
+    @IsOptional()
+    coordinatedDate?: string;
+
+    @IsString()
+    @IsOptional()
+    coordinatedContactId?: string;
+
+    @IsString()
     createdAt: string;
 
     @Exclude()
