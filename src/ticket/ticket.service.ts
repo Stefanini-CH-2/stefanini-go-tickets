@@ -204,7 +204,7 @@ export class TicketService {
       if (newStateTicket) {
         if (!newStateTicket?.customs?.coordinatedDate) throw new NotFoundException('Para coordinar debes enviar una fecha de coordinación.');
         ticket.coordinatedDate = newStateTicket.customs.coordinatedDate;
-        const contact = await this.databaseService.get(ticket.coordinatedDate, 'contacts')
+        const contact = await this.databaseService.get(newStateTicket?.customs?.coordinatedContactId, 'contacts')
         if (!contact) throw new NotFoundException('Contacto no encontrado');
         ticket.coordinatedContactId = contact.id;
         await this.updateTicketField(ticketId, {
