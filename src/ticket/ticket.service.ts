@@ -224,8 +224,7 @@ export class TicketService {
       targetState,
       ticket.dispatchers,
       ticket.technicians,
-      ticket.coordinatedDate || null,
-      ticket.coordinatedContactId || null,
+      { coordinatedDate: ticket?.coordinatedDate, coordinatedContactId: ticket?.coordinatedContactId }
     );
 
     return `Estado actualizado a ${targetState?.label} con éxito para el ticket ${ticket.ticket_number}`;

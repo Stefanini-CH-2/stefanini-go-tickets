@@ -46,8 +46,7 @@ export class StateMachineService {
     toState: Record<string, string>,
     dispatchers: { id: string; enabled: boolean; fullName: string }[],
     technicians: { id: string; enabled: boolean; fullName: string }[],
-    coordinatedDate?: string,
-    coordinatedContactId?: string,
+    customs?: Record<string,any>
   ): Promise<void> {
     const updatedAt = new Date().toISOString();
 
@@ -90,8 +89,7 @@ export class StateMachineService {
       commerceId,
       dispatcherId: dispatcher?.id || null,
       technicianId: technician?.id || null,
-      coordinatedDate: coordinatedDate || null,
-      coordinatedContactId: coordinatedContactId || null
+      customs
     };
 
     await this.stateHistory.create(stateHistory, commerceId);
