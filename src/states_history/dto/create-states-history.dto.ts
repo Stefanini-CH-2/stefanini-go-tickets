@@ -5,6 +5,7 @@ import {
     IsString,
     ValidateNested,
     IsObject,
+    isObject,
 } from 'class-validator';
 
 class Coords {
@@ -79,6 +80,9 @@ export class StatesHistory {
     @IsString()
     @IsNotEmpty()
     commerceId: string;
+
+    @IsObject()
+    customs?: Record<string, any>;
 
     @IsString()
     createdAt: string;
