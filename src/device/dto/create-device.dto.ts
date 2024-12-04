@@ -12,7 +12,7 @@ export class Device {
 
   @IsString()
   @IsOptional()
-  type: string;
+  articleType: string;
 
   @IsString()
   @IsOptional()
@@ -20,27 +20,7 @@ export class Device {
 
   @IsString()
   @IsOptional()
-  serial: string;
-
-  @IsString()
-  @IsOptional()
-  ip: string;
-
-  @IsString()
-  @IsOptional()
-  state: string;
-
-  @IsString()
-  @IsOptional()
-  partNumber: string;
-
-  @IsString()
-  @IsOptional()
-  inventoryNumber: string;
-
-  @IsString()
-  @IsOptional()
-  model: string;
+  category: string;
 
   @IsString()
   @IsOptional()
@@ -48,7 +28,31 @@ export class Device {
 
   @IsString()
   @IsOptional()
-  category: string;
+  inventoryNumber: string;
+
+  @IsString()
+  @IsOptional()
+  ip: string;
+
+  @IsString()
+  @IsOptional()
+  model: string;
+
+  @IsString()
+  @IsOptional()
+  partNumber: string;
+
+  @IsString()
+  @IsOptional()
+  serial: string;
+
+  @IsString()
+  @IsOptional()
+  state: string;
+
+  @IsString()
+  @IsOptional()
+  type: string;
 
   @Exclude()
   _id: string;
