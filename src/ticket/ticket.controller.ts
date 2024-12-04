@@ -22,6 +22,7 @@ import {
 } from 'stefaninigo';
 import { ParseJsonPipe } from 'src/pipes/json.pipe';
 import { Utils } from 'src/utils/utils';
+import { NewStateTicketDto } from './dto/newstate-ticket.dto';
 
 @Controller('tickets')
 export class TicketController {
@@ -34,9 +35,12 @@ export class TicketController {
   }
 
   @Put(':id/states/:newState')
-  async updateState(@Param('id') id: string, @Param('newState') newState: string) {
-
-    const result = await this.ticketService.updateState(id, newState);
+  async updateState(
+    @Param('id') id: string,
+    @Param('newState') newState: string,
+    @Body() newStateBody?: NewStateTicketDto
+  ) {
+    const result = await this.ticketService.updateState(id, newState, newStateBody);
     return result;
   }
 

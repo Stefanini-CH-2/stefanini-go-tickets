@@ -45,16 +45,17 @@ export class StateMachineService {
     fromState: Record<string, string>,
     toState: Record<string, string>,
     dispatchers: { id: string; enabled: boolean; fullName: string }[],
-    technicians: { id: string; enabled: boolean; fullName: string }[]
+    technicians: { id: string; enabled: boolean; fullName: string }[],
+    customs?: Record<string,any>
   ): Promise<void> {
     const updatedAt = new Date().toISOString();
-  
+
     const getEnabledUser = (users: { enabled: boolean; fullName?: string; id?: string }[] = []) =>
       users.find(user => user.enabled) || null;
-  
+
     const getLastTechnician = (techs: { enabled: boolean; fullName: string; id: string }[] = []) =>
       techs.length > 1 ? techs[techs.length - 2] : null;
-  
+
     const generateDescription = (
       from: Record<string, string>,
       to: Record<string, string>,
@@ -73,13 +74,13 @@ export class StateMachineService {
       }
       return `Cambio de estado ${from?.label} al estado ${to?.label}.`;
     };
-  
+
     const dispatcher = getEnabledUser(dispatchers);
     const technician = getEnabledUser(technicians);
     const lastTechnician = getLastTechnician(technicians);
-  
+
     const description = generateDescription(fromState, toState, dispatcher, technician, lastTechnician);
-  
+
     const stateHistory: StatesHistory = {
       ticketId,
       stateId: toState.id,
@@ -88,8 +89,9 @@ export class StateMachineService {
       commerceId,
       dispatcherId: dispatcher?.id || null,
       technicianId: technician?.id || null,
+      customs
     };
-  
+
     await this.stateHistory.create(stateHistory, commerceId);
-  }  
+  }
 }
