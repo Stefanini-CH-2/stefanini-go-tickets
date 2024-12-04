@@ -1,39 +1,55 @@
-import { Exclude } from "class-transformer"
-import { IsNotEmpty, IsOptional, IsString } from "class-validator"
+import { Exclude } from 'class-transformer';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class Device {
-    @IsString()
-    @IsNotEmpty()
-    evidenceId: string
+  @IsString()
+  @IsNotEmpty()
+  evidenceId: string;
 
-    @IsString()
-    @IsNotEmpty()
-    ticketId: string
+  @IsString()
+  @IsNotEmpty()
+  ticketId: string;
 
-    @IsString()
-    @IsNotEmpty()
-    type: string
+  @IsString()
+  @IsOptional()
+  type: string;
 
-    @IsString()
-    @IsNotEmpty()
-    brand: string
+  @IsString()
+  @IsOptional()
+  brand: string;
 
-    @IsString()
-    @IsNotEmpty()
-    serial: string
+  @IsString()
+  @IsOptional()
+  serial: string;
 
-    @IsString()
-    @IsNotEmpty()
-    ip: string
+  @IsString()
+  @IsOptional()
+  ip: string;
 
-    @IsString()
-    @IsNotEmpty()
-    state: string 
+  @IsString()
+  @IsOptional()
+  state: string;
 
-    @IsString()
-    @IsOptional()
-    description: string
+  @IsString()
+  @IsOptional()
+  partNumber: string;
 
-    @Exclude()
-    _id: string;
+  @IsString()
+  @IsOptional()
+  inventoryNumber: string;
+
+  @IsString()
+  @IsOptional()
+  model: string;
+
+  @IsString()
+  @IsOptional()
+  description: string;
+
+  @IsString()
+  @IsOptional()
+  category: string;
+
+  @Exclude()
+  _id: string;
 }

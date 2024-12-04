@@ -48,11 +48,11 @@ export class Ticket {
   attentionType: string;
 
   @IsString()
-  @IsOptional()
+  @IsNotEmpty()
   categoryId: string;
 
   @IsString()
-  @IsOptional()
+  @IsNotEmpty()
   subcategoryId: string;
 
   @IsString()
