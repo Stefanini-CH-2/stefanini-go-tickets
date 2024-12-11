@@ -1,5 +1,5 @@
 import { Exclude } from "class-transformer";
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class Comment {
     @IsString()
@@ -13,6 +13,14 @@ export class Comment {
     @IsString()
     @IsNotEmpty()
     employeeId: string;
+
+    /* @IsString()
+    @IsOptional()
+    employeeName: string;
+
+    @IsString()
+    @IsOptional()
+    employeeRole: string; */
 
     @IsString()
     @IsNotEmpty()

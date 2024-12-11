@@ -15,13 +15,11 @@ export class StatesHistoryService {
   async create(states: StatesHistory | StatesHistory[], commerceId: string): Promise<string[]> {
     const createdAt = new Date().toISOString();
 
-    // Obtiene la máquina de estados usando el commerceId
     const stateMachines = await this.databaseService.list(0, 1, { filters: { commerceId, id: "state_machine" } }, this.statesCollection);
     if (Array.isArray(stateMachines) && !stateMachines.length) {
       throw new NotFoundException('Máquina de estados no encontrada');
     }
     const stateMachine = stateMachines[0];
-    // Mapea el estado usando la máquina de estados obtenida
     const mapState = (stateId: string) => {
       const foundState = stateMachine?.states?.find((state: { id: string }) => state.id === stateId);
       return foundState
