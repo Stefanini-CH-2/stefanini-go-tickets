@@ -1052,9 +1052,12 @@ export class TicketService {
         throw new NotFoundException('Técnico no encontrado en este ticket');
     }
 
+    const technician = await this.getEmployeeById(technicianToUnassign?.id);
+    if (!technician) throw new NotFoundException('Técnico no encontrado');
+
     if (
       dispatcher.role !== EmployeeRole.ADMIN &&
-      dispatcher.provider !== technicianToUnassign.provider
+      dispatcher.provider !== technician.provider
     ) {
       throw new ForbiddenException(
         'No está autorizado para desasignar técnicos de otro proveedor',
