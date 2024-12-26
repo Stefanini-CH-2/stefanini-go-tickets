@@ -138,6 +138,15 @@ export class TicketController {
     return await this.ticketService.listFlows(start, limit, queryParams);
   }
 
+  @Get('technicians/:technicianId/stats')
+  async getStatsByTechnician(
+    @Param('technicianId') technicianId: string
+  ) {
+    const result = await this.ticketService.getStatsByTechnician(technicianId);
+    return result;
+
+  }
+
   @Post(':id/technicians')
   async assignTechnician(@Param('id') id: string, @Body() body: any) {
     const { technicianId, dispatcherId } = body;

@@ -6,6 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { TicketEntity } from './entities/ticket.entity';
 import { Ticket } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { DatabaseService, QueryParams } from 'stefaninigo';
@@ -119,8 +120,12 @@ export class TicketService {
     if (!ticket) {
       throw new NotFoundException('Ticket not found');
     }
-    await this.databaseService.delete(id, this.collectionName);
-
+    const updateTicketDto: UpdateTicketDto = {
+      deleted: true,
+      currentState: {id: "deleted", name: "deleted"},
+      updatedAt: ''
+    };
+    await this.update(id, updateTicketDto);
     return 'Ticket deleted successfully';
   }
 
@@ -950,6 +955,7 @@ export class TicketService {
     const currentlyAssignedTechnician = ticket.technicians?.find(
       (tech) => tech.id === technicianId && tech.enabled,
     );
+    
     if (currentlyAssignedTechnician) {
       return `El técnico ${technician.firstName} ${technician.firstSurname} ya está asignado al ticket ${ticket.ticket_number}.`;
     }
@@ -1291,6 +1297,44 @@ export class TicketService {
     // Cambiar el estado del ticket y crear historial
     //await this.changeTicketState(ticketId, 'unnassign_dispatcher', dispatcherId, null, ticket.currentState);
     return `Dispatcher ${dispatcherId} successfully unassigned from ticket ${ticketId}.`;
+  }
+  
+  async getStatsByTechnician(technicianId: string) {
+    const queryParams: QueryParams = {
+      filters: { 'technicians.id': technicianId },
+      fields: ['attentionType', 'currentState'],
+      sort: { createdAt: 'desc' },
+    };
+
+    const tickets: any = await this.databaseService.list(
+      0,
+      999999,
+      queryParams,
+      this.collectionName
+    );
+
+    let totalClosed = 0;
+    let totalPending = 0;
+    const ticketsCountByType: Record<string, number> = {};
+    for (const ticket of Utils.mapRecord(TicketEntity, tickets)) {
+      const type = ticket?.attentionType;
+      const currentStateId = ticket?.currentState?.id;
+
+      if (currentStateId === 'closed') {
+        totalClosed++;
+      } else {
+        totalPending++;
+      }
+      if (type) {
+        ticketsCountByType[type] = (ticketsCountByType[type] || 0) + 1;
+      }
+    }
+    return {
+      technicianId,
+      ticketsCountByType,
+      totalClosed,
+      totalPending,
+    };
   }
 
   private async getEmployeeById(employeeId: string) {
