@@ -1,3 +1,4 @@
+import { map } from 'rxjs/operators';
 import {
   BadRequestException,
   ConflictException,
@@ -43,7 +44,7 @@ export class TicketService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateMachine: StateMachineService,
-  ) { }
+  ) {}
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -122,8 +123,8 @@ export class TicketService {
     }
     const updateTicketDto: UpdateTicketDto = {
       deleted: true,
-      currentState: {id: "deleted", name: "deleted"},
-      updatedAt: ''
+      currentState: { id: 'deleted', name: 'deleted' },
+      updatedAt: '',
     };
     await this.update(id, updateTicketDto);
     return 'Ticket deleted successfully';
@@ -152,7 +153,11 @@ export class TicketService {
     };
   }
 
-  async updateState(ticketId: string, newState: string, newStateTicket?: NewStateTicketDto): Promise<any> {
+  async updateState(
+    ticketId: string,
+    newState: string,
+    newStateTicket?: NewStateTicketDto,
+  ): Promise<any> {
     const ticket = await this.getTicketById(ticketId);
     if (!ticket) throw new NotFoundException('Ticket no encontrado');
 
@@ -209,9 +214,15 @@ export class TicketService {
     const updatedAt = new Date().toISOString();
     if (newState === 'coordinate') {
       if (newStateTicket) {
-        if (!newStateTicket?.customs?.coordinatedDate) throw new NotFoundException('Para coordinar debes enviar una fecha de coordinación.');
+        if (!newStateTicket?.customs?.coordinatedDate)
+          throw new NotFoundException(
+            'Para coordinar debes enviar una fecha de coordinación.',
+          );
         ticket.coordinatedDate = newStateTicket.customs.coordinatedDate;
-        const contact = await this.databaseService.get(newStateTicket?.customs?.coordinatedContactId, 'contacts')
+        const contact = await this.databaseService.get(
+          newStateTicket?.customs?.coordinatedContactId,
+          'contacts',
+        );
         if (!contact) throw new NotFoundException('Contacto no encontrado');
         ticket.coordinatedContactId = contact.id;
         await this.updateTicketField(ticketId, {
@@ -221,7 +232,6 @@ export class TicketService {
       }
     }
 
-    
     await this.updateTicketField(ticketId, {
       currentState: { id: targetState?.id, label: targetState?.label },
       updatedAt,
@@ -234,7 +244,10 @@ export class TicketService {
       targetState,
       ticket.dispatchers,
       ticket.technicians,
-      { coordinatedDate: ticket?.coordinatedDate, coordinatedContactId: ticket?.coordinatedContactId }
+      {
+        coordinatedDate: ticket?.coordinatedDate,
+        coordinatedContactId: ticket?.coordinatedContactId,
+      },
     );
 
     return `Estado actualizado a ${targetState?.label} con éxito para el ticket ${ticket.ticket_number}`;
@@ -536,13 +549,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-        ticket.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-      )
+          ticket.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+        )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-        ticket.technicians?.map((t) => t.id)?.includes(technician.id),
-      )
+          ticket.technicians?.map((t) => t.id)?.includes(technician.id),
+        )
       : [];
 
     const statesHistory = statesHistoryList
@@ -834,7 +847,7 @@ export class TicketService {
     tickets?.forEach((ticket) => {
       const technicians = ticket.technicians;
       technicians?.forEach((technician) => {
-        uniqueTechniciansMap?.set(technician.id,  {
+        uniqueTechniciansMap?.set(technician.id, {
           id: technician.id,
           fullName: technician.fullName,
           provider: technician.provider,
@@ -911,12 +924,12 @@ export class TicketService {
       };
 
       if (ticket.ticket.currentState.id === 'coordinate') {
-        if(!transformedTicket.coordinatedAt){
+        if (!transformedTicket.coordinatedAt) {
           transformedTicket.coordinatedAt = ticket.appointments?.[0]?.endDate;
         }
-        const coordinatedAt = transformedTicket.coordinatedAt ? new Date(
-          transformedTicket.coordinatedAt,
-        ).toISOString() : null;
+        const coordinatedAt = transformedTicket.coordinatedAt
+          ? new Date(transformedTicket.coordinatedAt).toISOString()
+          : null;
         const date1 = dayjs(coordinatedAt);
         const date2 = dayjs(now);
         if (date1.isAfter(date2)) {
@@ -955,7 +968,7 @@ export class TicketService {
     const currentlyAssignedTechnician = ticket.technicians?.find(
       (tech) => tech.id === technicianId && tech.enabled,
     );
-    
+
     if (currentlyAssignedTechnician) {
       return `El técnico ${technician.firstName} ${technician.firstSurname} ya está asignado al ticket ${ticket.ticket_number}.`;
     }
@@ -1298,11 +1311,14 @@ export class TicketService {
     //await this.changeTicketState(ticketId, 'unnassign_dispatcher', dispatcherId, null, ticket.currentState);
     return `Dispatcher ${dispatcherId} successfully unassigned from ticket ${ticketId}.`;
   }
-  
+
   async getStatsByTechnician(technicianId: string) {
     const queryParams: QueryParams = {
-      filters: { 'technicians.id': technicianId },
-      fields: ['attentionType', 'currentState'],
+      filters: {
+        'technicians.id': technicianId,
+        'technicians.enabled': true,
+      },
+      fields: ['attentionType', 'currentState', 'commerceId'],
       sort: { createdAt: 'desc' },
     };
 
@@ -1310,7 +1326,16 @@ export class TicketService {
       0,
       999999,
       queryParams,
-      this.collectionName
+      this.collectionName,
+    );
+
+    const attentionTypes = await this.databaseService.list(
+      0,
+      999999,
+      {
+        filters: { id: 'attentionType' },
+      },
+      'datas',
     );
 
     let totalClosed = 0;
@@ -1326,7 +1351,13 @@ export class TicketService {
         totalPending++;
       }
       if (type) {
-        ticketsCountByType[type] = (ticketsCountByType[type] || 0) + 1;
+        const typeAttention = Array.isArray(attentionTypes)
+          ? attentionTypes
+              .find((att) => att.customerDni === ticket.commerceId)
+              .values.find((val) => val.value == ticket.attentionType)
+          : null;
+        ticketsCountByType[typeAttention.name] =
+          (ticketsCountByType[typeAttention.name] || 0) + 1;
       }
     }
     return {
@@ -1345,7 +1376,6 @@ export class TicketService {
     ticketId: string,
     fields: Partial<UpdateTicketDto>,
   ) {
-
     return await this.databaseService.update(
       ticketId,
       fields,
