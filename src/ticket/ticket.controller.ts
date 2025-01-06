@@ -20,7 +20,7 @@ import {
   QuerySearch,
   QuerySort,
 } from 'stefaninigo';
-import { ParseJsonPipe } from 'src/pipes/json.pipe';
+import { ParseJsonPipe } from 'src/pipes/json-pipe';
 import { Utils } from 'src/utils/utils';
 import { NewStateTicketDto } from './dto/newstate-ticket.dto';
 
@@ -140,9 +140,10 @@ export class TicketController {
 
   @Get('technicians/:technicianId/stats')
   async getStatsByTechnician(
-    @Param('technicianId') technicianId: string
+    @Param('technicianId') technicianId: string,
+    @Query('dateRange') dateRange?: 'today' | 'week' | 'month'
   ) {
-    const result = await this.ticketService.getStatsByTechnician(technicianId);
+    const result = await this.ticketService.getStatsByTechnician(technicianId, dateRange);
     return result;
 
   }
