@@ -3,7 +3,7 @@ import { DeviceService } from './device.service';
 import { Device } from './dto/create-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 import { plainToClass } from 'class-transformer';
-import { ParseJsonPipe } from 'src/pipes/json.pipe';
+import { ParseJsonPipe } from 'src/pipes/json-pipe';
 import { QueryExclude, QueryFilters, QueryParams, QuerySearch, QuerySort } from 'stefaninigo';
 import { Utils } from 'src/utils/utils';
 

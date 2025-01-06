@@ -20,7 +20,7 @@ import {
   QuerySearch,
   QuerySort,
 } from 'stefaninigo';
-import { ParseJsonPipe } from 'src/pipes/json.pipe';
+import { ParseJsonPipe } from 'src/pipes/json-pipe';
 import { Utils } from 'src/utils/utils';
 import { NewStateTicketDto } from './dto/newstate-ticket.dto';
 

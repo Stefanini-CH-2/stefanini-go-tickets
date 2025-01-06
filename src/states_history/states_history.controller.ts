@@ -3,7 +3,7 @@ import { StatesHistoryService } from './states_history.service';
 import { StatesHistory } from './dto/create-states-history.dto';
 import { UpdateStatesHistoryDto } from './dto/update-states-history.dto';
 import { plainToClass } from 'class-transformer';
-import { ParseJsonPipe } from 'src/pipes/json.pipe';
+import { ParseJsonPipe } from 'src/pipes/json-pipe';
 import { QueryExclude, QueryFilters, QueryParams, QuerySearch, QuerySort } from 'stefaninigo';
 import { Utils } from 'src/utils/utils';
 

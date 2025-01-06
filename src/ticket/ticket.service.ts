@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { StatesHistory } from 'src/states_history/dto/create-states-history.dto';
 import { Utils } from 'src/utils/utils';
 import { Evidence } from 'src/evidence/dto/create-evidence.dto';
-import { Comment } from 'src/comment/dto/create-comment.dto';
+import { CreateCommentDto } from 'src/comment/dto/create-comment.dto';
 import { EmployeeRole, Provider } from './enums';
 import * as dayjs from 'dayjs';
 import { StateMachineService } from './state_machine.service';
@@ -667,7 +667,7 @@ export class TicketService {
 
     const allEmployees = [...dispatchers, ...technicians];
 
-    const comments = Utils.mapRecord(Comment, _comments);
+    const comments = Utils.mapRecord(CreateCommentDto, _comments);
 
     const commentsWithEmployeeNames = comments?.map((comment) => {
       const employee = allEmployees?.find(
