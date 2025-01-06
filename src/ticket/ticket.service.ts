@@ -44,7 +44,7 @@ export class TicketService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateMachine: StateMachineService,
-  ) {}
+  ) { }
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -549,13 +549,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-          ticket.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-        )
+        ticket.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+      )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-          ticket.technicians?.map((t) => t.id)?.includes(technician.id),
-        )
+        ticket.technicians?.map((t) => t.id)?.includes(technician.id),
+      )
       : [];
 
     const statesHistory = statesHistoryList
@@ -1312,24 +1312,43 @@ export class TicketService {
     return `Dispatcher ${dispatcherId} successfully unassigned from ticket ${ticketId}.`;
   }
 
-  async getStatsByTechnician(technicianId: string) {
+  async getStatsByTechnician(
+    technicianId: string,
+    dateRange?: 'today' | 'week' | 'month'
+  ) {
     const queryParams: QueryParams = {
       filters: {
         'technicians.id': technicianId,
         'technicians.enabled': true,
       },
-      fields: ['attentionType', 'currentState', 'commerceId'],
+      fields: ['attentionType', 'currentState', 'commerceId', 'createdAt'],
       sort: { createdAt: 'desc' },
     };
-  
-    // 1. Obtenemos los tickets para el técnico
+
+    if (dateRange) {
+      const now = new Date()
+
+      const fromDates: Record<string, Date> = {
+        today: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+        week: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        month: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      }
+
+      const fromDate = fromDates[dateRange];
+
+      queryParams.filters.createdAt = {
+        from: fromDate.toISOString(),
+        to: now.toISOString()
+      }
+    }
+
     const tickets: any = await this.databaseService.list(
       0,
       999999,
       queryParams,
       this.collectionName,
     );
-  
+
     const attentionTypesList = await this.databaseService.list(
       0,
       999999,
@@ -1338,7 +1357,7 @@ export class TicketService {
       },
       'datas',
     );
-  
+
     let totalClosed = 0;
     let totalPending = 0;
 
@@ -1385,7 +1404,6 @@ export class TicketService {
       totalPending,
     };
   }
-  
 
   private async getEmployeeById(employeeId: string) {
     return await this.databaseService.get(employeeId, this.employeesCollection);

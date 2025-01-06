@@ -14,6 +14,9 @@ export class Comment {
     @IsNotEmpty()
     employeeId: string;
 
+    @IsOptional()
+    flag?: boolean;
+
     /* @IsString()
     @IsOptional()
     employeeName: string;
