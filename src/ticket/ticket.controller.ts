@@ -141,9 +141,10 @@ export class TicketController {
   @Get('technicians/:technicianId/stats')
   async getStatsByTechnician(
     @Param('technicianId') technicianId: string,
-    @Query('dateRange') dateRange?: 'today' | 'week' | 'month'
+    @Query('dateRange') dateRange?: 'today' | 'week' | 'month',
+    @Query('commerceId') commerceId?: string
   ) {
-    const result = await this.ticketService.getStatsByTechnician(technicianId, dateRange);
+    const result = await this.ticketService.getStatsByTechnician(technicianId, commerceId, dateRange);
     return result;
 
   }

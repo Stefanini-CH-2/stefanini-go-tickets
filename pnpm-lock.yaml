@@ -39,8 +39,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.1
       stefaninigo:
-        specifier: ^0.3.9
-        version: 0.3.9(class-transformer@0.5.1)(class-validator@0.14.1)
+        specifier: ^0.4.1
+        version: 0.4.1(class-transformer@0.5.1)(class-validator@0.14.1)
       uuid:
         specifier: ^10.0.0
         version: 10.0.0
@@ -3116,8 +3116,8 @@ packages:
     resolution: {integrity: sha512-RwNA9Z/7PrK06rYLIzFMlaF+l73iwpzsqRIFgbMLbTcLD6cOao82TaWefPXQvB2fOC4AjuYSEndS7N/mTCbkdQ==}
     engines: {node: '>= 0.8'}
 
-  stefaninigo@0.3.9:
-    resolution: {integrity: sha512-gzxu8VXxSXML4hDkFPwB/V4AX/uP5oPn3GWvclkc29kXLXcc/VrBljlUAw30k3j/GdSBNO84H/t097V4GD5xTw==}
+  stefaninigo@0.4.1:
+    resolution: {integrity: sha512-wpR8jrgwM+xEbYANxY7mFioPYv2QTZe9p8MB62AUdLPNLQSAAVHDZHmIPlJYtp+8Uv7ZjzJOt//QrxBMFJB4yw==}
 
   stream-browserify@3.0.0:
     resolution: {integrity: sha512-H73RAHsVBapbim0tU2JwwOiXUj+fikfiaoYAKHF3VJfA0pe2BCzkhAHBlLG6REzE+2WNZcxOXjK7lkso+9euLA==}
@@ -7784,7 +7784,7 @@ snapshots:
 
   statuses@2.0.1: {}
 
-  stefaninigo@0.3.9(class-transformer@0.5.1)(class-validator@0.14.1):
+  stefaninigo@0.4.1(class-transformer@0.5.1)(class-validator@0.14.1):
     dependencies:
       '@aws-sdk/client-dynamodb': 3.637.0
       '@aws-sdk/client-s3': 3.637.0

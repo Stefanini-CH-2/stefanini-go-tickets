@@ -1314,10 +1314,12 @@ export class TicketService {
 
   async getStatsByTechnician(
     technicianId: string,
+    commerceId: string,
     dateRange?: 'today' | 'week' | 'month'
   ) {
     const queryParams: QueryParams = {
       filters: {
+        'commerceId': commerceId,
         'technicians.id': technicianId,
         'technicians.enabled': true,
       },
