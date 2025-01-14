@@ -50,10 +50,10 @@ export class TicketService {
     const createdAt = new Date().toISOString();
     const mapTechniciansAndDispatchers = async (ticket) => {
       const technicians = await Promise.all(
-        ticket.technicians?.map((tech) => this.getEmployeeById(tech?.id)),
+        ticket?.technicians?.map((tech) => this.getEmployeeById(tech?.id)),
       );
       const dispatchers = await Promise.all(
-        ticket.dispatchers?.map((disp) => this.getEmployeeById(disp?.id)),
+        ticket?.dispatchers?.map((disp) => this.getEmployeeById(disp?.id)),
       );
       return {
         ...ticket,
@@ -308,10 +308,10 @@ export class TicketService {
         acc.branchesId?.push(ticket.branchId);
         acc.contactsId?.push(...ticket.contactsId);
         acc.disptachersId?.push(
-          ...ticket.dispatchers?.map((disptacher) => disptacher.id),
+          ...ticket?.dispatchers?.map((disptacher) => disptacher.id),
         );
         acc.techniciansId?.push(
-          ...ticket.technicians?.map((technician) => technician.id),
+          ...ticket?.technicians?.map((technician) => technician.id),
         );
         return acc;
       },
@@ -549,12 +549,12 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-        ticket.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
       )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-        ticket.technicians?.map((t) => t.id)?.includes(technician.id),
+        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
       )
       : [];
 
@@ -754,7 +754,7 @@ export class TicketService {
           email: disptacher?.email,
         };
       }),
-      technicians: ticket.technicians?.map((technician) => {
+      technicians: ticket?.technicians?.map((technician) => {
         const technicianInfo = technicians?.find(
           (tech) => tech?.id === technician?.id,
         );
@@ -1005,7 +1005,7 @@ export class TicketService {
     const updatedAt = new Date().toISOString();
 
     const updatedTechnicians = [
-      ...ticket.technicians?.map((tech) => {
+      ...ticket?.technicians?.map((tech) => {
         if (tech.enabled) {
           return {
             ...tech,
@@ -1109,7 +1109,7 @@ export class TicketService {
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedTechnicians = ticket.technicians?.map((tech) => {
+    const updatedTechnicians = ticket?.technicians?.map((tech) => {
       if (tech.id === technicianId && tech.enabled) {
         return {
           ...tech,
@@ -1205,7 +1205,7 @@ export class TicketService {
     const updatedAt = new Date().toISOString();
 
     const updatedDispatchers = [
-      ...ticket.dispatchers?.map((dispatcher) => {
+      ...ticket?.dispatchers?.map((dispatcher) => {
         if (dispatcher.enabled) {
           return {
             ...dispatcher,
@@ -1228,7 +1228,7 @@ export class TicketService {
       },
     ];
 
-    const updatedTechnicians = ticket.technicians?.map((tech) => {
+    const updatedTechnicians = ticket?.technicians?.map((tech) => {
       if (tech.enabled) {
         return {
           ...tech,
@@ -1286,7 +1286,7 @@ export class TicketService {
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedDispatchers = ticket.dispatchers?.map((dispatcher) => {
+    const updatedDispatchers = ticket?.dispatchers?.map((dispatcher) => {
       if (dispatcher.id === dispatcherId && dispatcher.enabled) {
         return {
           ...dispatcher,
