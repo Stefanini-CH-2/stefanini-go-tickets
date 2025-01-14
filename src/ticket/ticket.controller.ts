@@ -20,7 +20,7 @@ import {
   QuerySearch,
   QuerySort,
 } from 'stefaninigo';
-import { ParseJsonPipe } from 'src/pipes/json.pipe';
+import { ParseJsonPipe } from 'src/pipes/json-pipe';
 import { Utils } from 'src/utils/utils';
 import { NewStateTicketDto } from './dto/newstate-ticket.dto';
 
@@ -136,6 +136,17 @@ export class TicketController {
       search,
     };
     return await this.ticketService.listFlows(start, limit, queryParams);
+  }
+
+  @Get('technicians/:technicianId/stats')
+  async getStatsByTechnician(
+    @Param('technicianId') technicianId: string,
+    @Query('dateRange') dateRange?: 'today' | 'week' | 'month',
+    @Query('commerceId') commerceId?: string
+  ) {
+    const result = await this.ticketService.getStatsByTechnician(technicianId, commerceId, dateRange);
+    return result;
+
   }
 
   @Post(':id/technicians')

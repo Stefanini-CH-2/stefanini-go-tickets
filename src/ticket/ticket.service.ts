@@ -1,3 +1,4 @@
+import { map } from 'rxjs/operators';
 import {
   BadRequestException,
   ConflictException,
@@ -6,6 +7,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { TicketEntity } from './entities/ticket.entity';
 import { Ticket } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { DatabaseService, QueryParams } from 'stefaninigo';
@@ -13,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { StatesHistory } from 'src/states_history/dto/create-states-history.dto';
 import { Utils } from 'src/utils/utils';
 import { Evidence } from 'src/evidence/dto/create-evidence.dto';
-import { Comment } from 'src/comment/dto/create-comment.dto';
+import { CreateCommentDto } from 'src/comment/dto/create-comment.dto';
 import { EmployeeRole, Provider } from './enums';
 import * as dayjs from 'dayjs';
 import { StateMachineService } from './state_machine.service';
@@ -48,10 +50,10 @@ export class TicketService {
     const createdAt = new Date().toISOString();
     const mapTechniciansAndDispatchers = async (ticket) => {
       const technicians = await Promise.all(
-        ticket.technicians?.map((tech) => this.getEmployeeById(tech?.id)),
+        ticket?.technicians?.map((tech) => this.getEmployeeById(tech?.id)),
       );
       const dispatchers = await Promise.all(
-        ticket.dispatchers?.map((disp) => this.getEmployeeById(disp?.id)),
+        ticket?.dispatchers?.map((disp) => this.getEmployeeById(disp?.id)),
       );
       return {
         ...ticket,
@@ -119,8 +121,12 @@ export class TicketService {
     if (!ticket) {
       throw new NotFoundException('Ticket not found');
     }
-    await this.databaseService.delete(id, this.collectionName);
-
+    const updateTicketDto: UpdateTicketDto = {
+      deleted: true,
+      currentState: { id: 'deleted', name: 'deleted' },
+      updatedAt: '',
+    };
+    await this.update(id, updateTicketDto);
     return 'Ticket deleted successfully';
   }
 
@@ -147,7 +153,11 @@ export class TicketService {
     };
   }
 
-  async updateState(ticketId: string, newState: string, newStateTicket?: NewStateTicketDto): Promise<any> {
+  async updateState(
+    ticketId: string,
+    newState: string,
+    newStateTicket?: NewStateTicketDto,
+  ): Promise<any> {
     const ticket = await this.getTicketById(ticketId);
     if (!ticket) throw new NotFoundException('Ticket no encontrado');
 
@@ -204,9 +214,15 @@ export class TicketService {
     const updatedAt = new Date().toISOString();
     if (newState === 'coordinate') {
       if (newStateTicket) {
-        if (!newStateTicket?.customs?.coordinatedDate) throw new NotFoundException('Para coordinar debes enviar una fecha de coordinación.');
+        if (!newStateTicket?.customs?.coordinatedDate)
+          throw new NotFoundException(
+            'Para coordinar debes enviar una fecha de coordinación.',
+          );
         ticket.coordinatedDate = newStateTicket.customs.coordinatedDate;
-        const contact = await this.databaseService.get(newStateTicket?.customs?.coordinatedContactId, 'contacts')
+        const contact = await this.databaseService.get(
+          newStateTicket?.customs?.coordinatedContactId,
+          'contacts',
+        );
         if (!contact) throw new NotFoundException('Contacto no encontrado');
         ticket.coordinatedContactId = contact.id;
         await this.updateTicketField(ticketId, {
@@ -216,7 +232,6 @@ export class TicketService {
       }
     }
 
-    
     await this.updateTicketField(ticketId, {
       currentState: { id: targetState?.id, label: targetState?.label },
       updatedAt,
@@ -229,7 +244,10 @@ export class TicketService {
       targetState,
       ticket.dispatchers,
       ticket.technicians,
-      { coordinatedDate: ticket?.coordinatedDate, coordinatedContactId: ticket?.coordinatedContactId }
+      {
+        coordinatedDate: ticket?.coordinatedDate,
+        coordinatedContactId: ticket?.coordinatedContactId,
+      },
     );
 
     return `Estado actualizado a ${targetState?.label} con éxito para el ticket ${ticket.ticket_number}`;
@@ -290,10 +308,10 @@ export class TicketService {
         acc.branchesId?.push(ticket.branchId);
         acc.contactsId?.push(...ticket.contactsId);
         acc.disptachersId?.push(
-          ...ticket.dispatchers?.map((disptacher) => disptacher.id),
+          ...ticket?.dispatchers?.map((disptacher) => disptacher.id),
         );
         acc.techniciansId?.push(
-          ...ticket.technicians?.map((technician) => technician.id),
+          ...ticket?.technicians?.map((technician) => technician.id),
         );
         return acc;
       },
@@ -531,12 +549,12 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-        ticket.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
       )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-        ticket.technicians?.map((t) => t.id)?.includes(technician.id),
+        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
       )
       : [];
 
@@ -649,7 +667,7 @@ export class TicketService {
 
     const allEmployees = [...dispatchers, ...technicians];
 
-    const comments = Utils.mapRecord(Comment, _comments);
+    const comments = Utils.mapRecord(CreateCommentDto, _comments);
 
     const commentsWithEmployeeNames = comments?.map((comment) => {
       const employee = allEmployees?.find(
@@ -736,7 +754,7 @@ export class TicketService {
           email: disptacher?.email,
         };
       }),
-      technicians: ticket.technicians?.map((technician) => {
+      technicians: ticket?.technicians?.map((technician) => {
         const technicianInfo = technicians?.find(
           (tech) => tech?.id === technician?.id,
         );
@@ -829,7 +847,7 @@ export class TicketService {
     tickets?.forEach((ticket) => {
       const technicians = ticket.technicians;
       technicians?.forEach((technician) => {
-        uniqueTechniciansMap?.set(technician.id,  {
+        uniqueTechniciansMap?.set(technician.id, {
           id: technician.id,
           fullName: technician.fullName,
           provider: technician.provider,
@@ -906,12 +924,12 @@ export class TicketService {
       };
 
       if (ticket.ticket.currentState.id === 'coordinate') {
-        if(!transformedTicket.coordinatedAt){
+        if (!transformedTicket.coordinatedAt) {
           transformedTicket.coordinatedAt = ticket.appointments?.[0]?.endDate;
         }
-        const coordinatedAt = transformedTicket.coordinatedAt ? new Date(
-          transformedTicket.coordinatedAt,
-        ).toISOString() : null;
+        const coordinatedAt = transformedTicket.coordinatedAt
+          ? new Date(transformedTicket.coordinatedAt).toISOString()
+          : null;
         const date1 = dayjs(coordinatedAt);
         const date2 = dayjs(now);
         if (date1.isAfter(date2)) {
@@ -950,6 +968,7 @@ export class TicketService {
     const currentlyAssignedTechnician = ticket.technicians?.find(
       (tech) => tech.id === technicianId && tech.enabled,
     );
+
     if (currentlyAssignedTechnician) {
       return `El técnico ${technician.firstName} ${technician.firstSurname} ya está asignado al ticket ${ticket.ticket_number}.`;
     }
@@ -986,7 +1005,7 @@ export class TicketService {
     const updatedAt = new Date().toISOString();
 
     const updatedTechnicians = [
-      ...ticket.technicians?.map((tech) => {
+      ...ticket?.technicians?.map((tech) => {
         if (tech.enabled) {
           return {
             ...tech,
@@ -1090,7 +1109,7 @@ export class TicketService {
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedTechnicians = ticket.technicians?.map((tech) => {
+    const updatedTechnicians = ticket?.technicians?.map((tech) => {
       if (tech.id === technicianId && tech.enabled) {
         return {
           ...tech,
@@ -1186,7 +1205,7 @@ export class TicketService {
     const updatedAt = new Date().toISOString();
 
     const updatedDispatchers = [
-      ...ticket.dispatchers?.map((dispatcher) => {
+      ...ticket?.dispatchers?.map((dispatcher) => {
         if (dispatcher.enabled) {
           return {
             ...dispatcher,
@@ -1209,7 +1228,7 @@ export class TicketService {
       },
     ];
 
-    const updatedTechnicians = ticket.technicians?.map((tech) => {
+    const updatedTechnicians = ticket?.technicians?.map((tech) => {
       if (tech.enabled) {
         return {
           ...tech,
@@ -1267,7 +1286,7 @@ export class TicketService {
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedDispatchers = ticket.dispatchers?.map((dispatcher) => {
+    const updatedDispatchers = ticket?.dispatchers?.map((dispatcher) => {
       if (dispatcher.id === dispatcherId && dispatcher.enabled) {
         return {
           ...dispatcher,
@@ -1293,6 +1312,101 @@ export class TicketService {
     return `Dispatcher ${dispatcherId} successfully unassigned from ticket ${ticketId}.`;
   }
 
+  async getStatsByTechnician(
+    technicianId: string,
+    commerceId: string,
+    dateRange?: 'today' | 'week' | 'month'
+  ) {
+    const queryParams: QueryParams = {
+      filters: {
+        'commerceId': commerceId,
+        'technicians.id': technicianId,
+        'technicians.enabled': true,
+      },
+      fields: ['attentionType', 'currentState', 'commerceId', 'createdAt'],
+      sort: { createdAt: 'desc' },
+    };
+
+    if (dateRange) {
+      const now = new Date()
+
+      const fromDates: Record<string, Date> = {
+        today: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+        week: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        month: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      }
+
+      const fromDate = fromDates[dateRange];
+
+      queryParams.filters.createdAt = {
+        from: fromDate.toISOString(),
+        to: now.toISOString()
+      }
+    }
+
+    const tickets: any = await this.databaseService.list(
+      0,
+      999999,
+      queryParams,
+      this.collectionName,
+    );
+
+    const attentionTypesList = await this.databaseService.list(
+      0,
+      999999,
+      {
+        filters: { id: 'attentionType' },
+      },
+      'datas',
+    );
+
+    let totalClosed = 0;
+    let totalPending = 0;
+
+    const ticketsCountByType: Record<string, number> = {};
+
+    for (const ticket of Utils.mapRecord(TicketEntity, tickets)) {
+      const currentStateId = ticket?.currentState?.id;
+      if (currentStateId === 'closed') {
+        totalClosed++;
+      } else {
+        totalPending++;
+      }
+
+      const attentionTypeObject = Array.isArray(attentionTypesList)
+        ? attentionTypesList.find((att) => att.customerDni === ticket?.commerceId)
+        : null;
+
+      if (attentionTypeObject?.values?.length) {
+        const attentionType = attentionTypeObject.values.find(
+          (val) => val.value == ticket?.attentionType,
+        );
+        if (attentionType?.name) {
+          ticketsCountByType[attentionType.name] =
+            (ticketsCountByType[attentionType.name] || 0) + 1;
+        }
+      }
+    }
+    if (Array.isArray(attentionTypesList)) {
+      attentionTypesList.forEach((att) => {
+        if (Array.isArray(att.values)) {
+          att.values.forEach((val) => {
+            if (val?.name && !(val.name in ticketsCountByType)) {
+              ticketsCountByType[val.name] = 0;
+            }
+          });
+        }
+      });
+    }
+
+    return {
+      technicianId,
+      ticketsCountByType,
+      totalClosed,
+      totalPending,
+    };
+  }
+
   private async getEmployeeById(employeeId: string) {
     return await this.databaseService.get(employeeId, this.employeesCollection);
   }
@@ -1301,7 +1415,6 @@ export class TicketService {
     ticketId: string,
     fields: Partial<UpdateTicketDto>,
   ) {
-
     return await this.databaseService.update(
       ticketId,
       fields,

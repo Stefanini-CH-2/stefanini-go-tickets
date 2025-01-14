@@ -4,7 +4,7 @@ import { Evidence } from './dto/create-evidence.dto';
 import { UpdateEvidenceDto } from './dto/update-evidence.dto';
 import { plainToClass } from 'class-transformer';
 import { QueryExclude, QueryFilters, QueryParams, QuerySearch, QuerySort } from 'stefaninigo';
-import { ParseJsonPipe } from 'src/pipes/json.pipe';
+import { ParseJsonPipe } from 'src/pipes/json-pipe';
 import { Utils } from 'src/utils/utils';
 
 @Controller('evidences')

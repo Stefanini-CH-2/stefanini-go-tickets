@@ -1,7 +1,7 @@
 import { Exclude } from "class-transformer";
 import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 
-export class Comment {
+export class CreateCommentDto {
     @IsString()
     @IsNotEmpty()
     historyId: string;
@@ -13,6 +13,9 @@ export class Comment {
     @IsString()
     @IsNotEmpty()
     employeeId: string;
+
+    @IsOptional()
+    flag?: boolean;
 
     /* @IsString()
     @IsOptional()

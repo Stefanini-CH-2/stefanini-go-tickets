@@ -3,7 +3,7 @@ import { AppointmentsService } from './appointments.service';
 import { Appointment } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { plainToClass } from 'class-transformer';
-import { ParseJsonPipe } from 'src/pipes/json.pipe';
+import { ParseJsonPipe } from 'src/pipes/json-pipe';
 import { QueryExclude, QueryFilters, QueryParams, QuerySearch, QuerySort } from 'stefaninigo';
 import { Utils } from 'src/utils/utils';
 

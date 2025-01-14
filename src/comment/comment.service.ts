@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { Comment } from './dto/create-comment.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { DatabaseService, QueryParams } from 'stefaninigo';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,7 +11,7 @@ export class CommentService {
     @Inject('mongodb') private readonly databaseService: DatabaseService,
   ) {}
 
-  async create(comments: Comment | Comment[]) {
+  async create(comments: CreateCommentDto | CreateCommentDto[]) {
     const createdAt = new Date().toISOString();
     if (Array.isArray(comments)) {
       const commentWithIds = comments.map((comment) => ({
