@@ -9,7 +9,7 @@ export class EvidenceService {
   private collectionName: string = 'evidences';
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
-  ) { }
+  ) {}
 
   async create(evidences: Evidence | Evidence[]) {
     const createdAt = new Date().toISOString();
@@ -18,17 +18,20 @@ export class EvidenceService {
         id: uuidv4().toString(),
         createdAt,
         ...evidence,
-      }))
+      }));
       await this.databaseService.create(evidenceWithIds, this.collectionName);
       return evidenceWithIds.map((evidence) => evidence.id);
     } else {
-      const id = uuidv4().toString()
-      await this.databaseService.create({
-        id,
-        createdAt,
-        ...evidences
-      }, this.collectionName)
-      return [id]
+      const id = uuidv4().toString();
+      await this.databaseService.create(
+        {
+          id,
+          createdAt,
+          ...evidences,
+        },
+        this.collectionName,
+      );
+      return [id];
     }
   }
 
@@ -53,8 +56,16 @@ export class EvidenceService {
   async list(page: number, limit: number, queryParams: QueryParams) {
     page = page <= 0 ? 1 : page;
     const start = (page - 1) * limit;
-    const total = await this.databaseService.count(queryParams, this.collectionName);
-    const records = await this.databaseService.list(start, limit, queryParams, this.collectionName);
+    const total = await this.databaseService.count(
+      queryParams,
+      this.collectionName,
+    );
+    const records = await this.databaseService.list(
+      start,
+      limit,
+      queryParams,
+      this.collectionName,
+    );
 
     return {
       total,
@@ -66,9 +77,10 @@ export class EvidenceService {
 
   async update(id: string, evidence: UpdateEvidenceDto) {
     const updatedAt = new Date().toISOString();
-    evidence["updatedAt"] = updatedAt;
+    evidence['updatedAt'] = updatedAt;
     return (
-      (await this.databaseService.update(id, evidence, this.collectionName)) && 'Update successful'
+      (await this.databaseService.update(id, evidence, this.collectionName)) &&
+      'Update successful'
     );
   }
 }

@@ -15,12 +15,12 @@ import configuration from './configuration';
       load: [configuration],
       envFilePath: '.env',
     }),
-    TicketModule, 
-    DeviceModule, 
-    StatesHistoryModule, 
-    CommentModule, 
-    EvidenceModule, 
-    AppointmentsModule
+    TicketModule,
+    DeviceModule,
+    StatesHistoryModule,
+    CommentModule,
+    EvidenceModule,
+    AppointmentsModule,
   ],
   providers: [],
 })

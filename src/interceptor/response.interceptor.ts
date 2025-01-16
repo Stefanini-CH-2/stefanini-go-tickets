@@ -28,15 +28,19 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, any> {
           return throwError(() => error);
         }
 
-        return throwError(() =>
-          new HttpException({
-            success: false,
-            message:
-              error.response?.message ||
-              error.message ||
-              'Unexpected error occurred',
-            statusCode: status,
-          }, status),
+        return throwError(
+          () =>
+            new HttpException(
+              {
+                success: false,
+                message:
+                  error.response?.message ||
+                  error.message ||
+                  'Unexpected error occurred',
+                statusCode: status,
+              },
+              status,
+            ),
         );
       }),
     );

@@ -1,4 +1,3 @@
-import { map } from 'rxjs/operators';
 import {
   BadRequestException,
   ConflictException,
@@ -44,7 +43,7 @@ export class TicketService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateMachine: StateMachineService,
-  ) { }
+  ) {}
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -471,8 +470,28 @@ export class TicketService {
         { filters: { ticketId: ticketsId }, sort: { endDate: 'desc' } },
         'appointments',
       ),
-      this.databaseService.get('attentionType', 'datas'),
-      this.databaseService.get('priority', 'datas'),
+      this.databaseService.list(
+        0,
+        1,
+        {
+          filters: {
+            id: 'attentionType',
+            commerceId: commercesId,
+          },
+        },
+        'datas',
+      ),
+      this.databaseService.list(
+        0,
+        1,
+        {
+          filters: {
+            id: 'priority',
+            commerceId: commercesId,
+          },
+        },
+        'datas',
+      ),
     ]);
     const records = [];
     for (const ticket of tickets) {
@@ -506,8 +525,8 @@ export class TicketService {
         elements.category,
         elements.subcategory,
         elements.appointments,
-        attentionType,
-        priority,
+        attentionType?.[0],
+        priority?.[0],
       );
 
       records.push(ticketResult);
@@ -549,13 +568,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-      )
+          ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+        )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
-      )
+          ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
+        )
       : [];
 
     const statesHistory = statesHistoryList
@@ -1315,11 +1334,11 @@ export class TicketService {
   async getStatsByTechnician(
     technicianId: string,
     commerceId: string,
-    dateRange?: 'today' | 'week' | 'month'
+    dateRange?: 'today' | 'week' | 'month',
   ) {
     const queryParams: QueryParams = {
       filters: {
-        'commerceId': commerceId,
+        commerceId: commerceId,
         'technicians.id': technicianId,
         'technicians.enabled': true,
       },
@@ -1328,20 +1347,20 @@ export class TicketService {
     };
 
     if (dateRange) {
-      const now = new Date()
+      const now = new Date();
 
       const fromDates: Record<string, Date> = {
         today: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
         week: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
-        month: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      }
+        month: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+      };
 
       const fromDate = fromDates[dateRange];
 
       queryParams.filters.createdAt = {
         from: fromDate.toISOString(),
-        to: now.toISOString()
-      }
+        to: now.toISOString(),
+      };
     }
 
     const tickets: any = await this.databaseService.list(
@@ -1374,7 +1393,9 @@ export class TicketService {
       }
 
       const attentionTypeObject = Array.isArray(attentionTypesList)
-        ? attentionTypesList.find((att) => att.customerDni === ticket?.commerceId)
+        ? attentionTypesList.find(
+            (att) => att.customerDni === ticket?.commerceId,
+          )
         : null;
 
       if (attentionTypeObject?.values?.length) {

@@ -17,18 +17,24 @@ export class AppointmentsService {
       const appointmentWithIds = appointments.map((appointment) => ({
         id: uuidv4(),
         ...appointment,
-        createdAt
-      }))
-      await this.databaseService.create(appointmentWithIds, this.collectionName);
+        createdAt,
+      }));
+      await this.databaseService.create(
+        appointmentWithIds,
+        this.collectionName,
+      );
       return appointmentWithIds.map((appointment) => appointment.id);
     } else {
-      const id = uuidv4()
-      await this.databaseService.create({
-        id,
-        ...appointments,
-        createdAt
-      }, this.collectionName)
-      return [id]
+      const id = uuidv4();
+      await this.databaseService.create(
+        {
+          id,
+          ...appointments,
+          createdAt,
+        },
+        this.collectionName,
+      );
+      return [id];
     }
   }
 
@@ -53,9 +59,17 @@ export class AppointmentsService {
   async list(page: number, limit: number, queryParams: QueryParams) {
     page = page <= 0 ? 1 : page;
     const start = (page - 1) * limit;
-    const total = await this.databaseService.count(queryParams, this.collectionName);
-    queryParams.sort = { ...queryParams.sort, createdAt: "desc" };
-    const records = await this.databaseService.list(start, limit, queryParams, this.collectionName);
+    const total = await this.databaseService.count(
+      queryParams,
+      this.collectionName,
+    );
+    queryParams.sort = { ...queryParams.sort, createdAt: 'desc' };
+    const records = await this.databaseService.list(
+      start,
+      limit,
+      queryParams,
+      this.collectionName,
+    );
 
     return {
       total,
@@ -67,11 +81,13 @@ export class AppointmentsService {
 
   async update(id: string, appointment: UpdateAppointmentDto) {
     const updatedAt = new Date().toISOString();
-    appointment["updatedAt"] = updatedAt;
+    appointment['updatedAt'] = updatedAt;
     return (
-      (await this.databaseService.update(id, appointment, this.collectionName)) && 'Update successful'
+      (await this.databaseService.update(
+        id,
+        appointment,
+        this.collectionName,
+      )) && 'Update successful'
     );
   }
 }
-
-
