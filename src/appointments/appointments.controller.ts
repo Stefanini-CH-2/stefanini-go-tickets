@@ -1,10 +1,26 @@
-import { Controller, Get, Post, Body, Param, Delete, ParseIntPipe, Query, Put } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  ParseIntPipe,
+  Query,
+  Put,
+} from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { Appointment } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { plainToClass } from 'class-transformer';
 import { ParseJsonPipe } from 'src/pipes/json-pipe';
-import { QueryExclude, QueryFilters, QueryParams, QuerySearch, QuerySort } from 'stefaninigo';
+import {
+  QueryExclude,
+  QueryFilters,
+  QueryParams,
+  QuerySearch,
+  QuerySort,
+} from 'stefaninigo';
 import { Utils } from 'src/utils/utils';
 
 @Controller('appointments')
@@ -24,10 +40,8 @@ export class AppointmentsController {
   async get(@Param('id') id: string) {
     try {
       const result = this.appointmentsService.get(id);
-      return plainToClass(Appointment, result)
-    } catch (error) {
-      
-    }
+      return plainToClass(Appointment, result);
+    } catch (error) {}
   }
 
   @Get()
@@ -42,30 +56,32 @@ export class AppointmentsController {
     @Query('sort', new ParseJsonPipe<QuerySort>(QuerySort)) sort: QuerySort,
     @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
     search: QuerySearch,
-) {
+  ) {
     try {
-        const queryParams: QueryParams = {
-            filters,
-            search,
-            exclude,
-            fields,
-            sort,
-        };
-        const response = await this.appointmentsService.list(
-            start,
-            limit,
-            queryParams,
-        );
-        response.records = Utils.mapRecord(Appointment, response.records);
-        return response;
+      const queryParams: QueryParams = {
+        filters,
+        search,
+        exclude,
+        fields,
+        sort,
+      };
+      const response = await this.appointmentsService.list(
+        start,
+        limit,
+        queryParams,
+      );
+      response.records = Utils.mapRecord(Appointment, response.records);
+      return response;
     } catch (error) {
-        return error.message;
+      return error.message;
     }
-}
-
+  }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateAppointmentDto: UpdateAppointmentDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateAppointmentDto: UpdateAppointmentDto,
+  ) {
     try {
       return this.appointmentsService.update(id, updateAppointmentDto);
     } catch (error) {

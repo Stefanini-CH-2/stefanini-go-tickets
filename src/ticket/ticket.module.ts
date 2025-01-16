@@ -6,9 +6,9 @@ import { StateMachineService } from './state_machine.service';
 import { StatesHistoryService } from 'src/states_history/states_history.service';
 
 @Module({
-  imports:[
+  imports: [
     DatabaseModule.forRootAsync([
-        { name: 'mongodb', provider: DatabaseModule.PROVIDERS.MONGODB },
+      { name: 'mongodb', provider: DatabaseModule.PROVIDERS.MONGODB },
     ]),
   ],
   controllers: [TicketController],

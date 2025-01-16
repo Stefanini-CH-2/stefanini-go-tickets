@@ -1,23 +1,23 @@
-import { Exclude } from "class-transformer";
-import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { Exclude } from 'class-transformer';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateCommentDto {
-    @IsString()
-    @IsNotEmpty()
-    historyId: string;
+  @IsString()
+  @IsNotEmpty()
+  historyId: string;
 
-    @IsString()
-    @IsNotEmpty()
-    ticketId: string;
-  
-    @IsString()
-    @IsNotEmpty()
-    employeeId: string;
+  @IsString()
+  @IsNotEmpty()
+  ticketId: string;
 
-    @IsOptional()
-    flag?: boolean;
+  @IsString()
+  @IsNotEmpty()
+  employeeId: string;
 
-    /* @IsString()
+  @IsOptional()
+  flag?: boolean;
+
+  /* @IsString()
     @IsOptional()
     employeeName: string;
 
@@ -25,14 +25,14 @@ export class CreateCommentDto {
     @IsOptional()
     employeeRole: string; */
 
-    @IsString()
-    @IsNotEmpty()
-    statusId: string;
-  
-    @IsString()
-    @IsNotEmpty()
-    comment: string;
+  @IsString()
+  @IsNotEmpty()
+  statusId: string;
 
-    @Exclude()
-    _id: string;
+  @IsString()
+  @IsNotEmpty()
+  comment: string;
+
+  @Exclude()
+  _id: string;
 }

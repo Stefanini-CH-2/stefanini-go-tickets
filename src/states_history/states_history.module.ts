@@ -3,11 +3,10 @@ import { StatesHistoryService } from './states_history.service';
 import { StatesHistoryController } from './states_history.controller';
 import { DatabaseModule } from 'stefaninigo';
 
-
 @Module({
-  imports:[
+  imports: [
     DatabaseModule.forRootAsync([
-        { name: 'mongodb', provider: DatabaseModule.PROVIDERS.MONGODB },
+      { name: 'mongodb', provider: DatabaseModule.PROVIDERS.MONGODB },
     ]),
   ],
   controllers: [StatesHistoryController],
