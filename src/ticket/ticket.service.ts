@@ -206,7 +206,7 @@ export class TicketService {
       );
 
       if (Array.isArray(busyTickets) && busyTickets.length > 0) {
-        throw new ForbiddenException(
+        throw new BadRequestException(
           `El técnico asignado ya está atendiendo otro ticket ${busyTickets[0].ticket_number} estado ${busyTickets[0].currentState.label}`,
         );
       }
