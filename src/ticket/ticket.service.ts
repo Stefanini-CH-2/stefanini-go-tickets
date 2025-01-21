@@ -31,7 +31,7 @@ interface TransformedTicket {
   appointmentStatus?: string;
 }
 
-interface TicketsByStatus {
+export interface TicketsByStatus {
   [status: string]: TransformedTicket[];
 }
 
