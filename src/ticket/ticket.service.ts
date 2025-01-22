@@ -31,7 +31,7 @@ interface TransformedTicket {
   appointmentStatus?: string;
 }
 
-interface TicketsByStatus {
+export interface TicketsByStatus {
   [status: string]: TransformedTicket[];
 }
 
@@ -179,14 +179,15 @@ export class TicketService {
       );
     }
 
-    if (newState === 'in_service') {
+    const blockedStates = ['in_service', 'in_route', 'check_in'];
+    if (blockedStates.includes(newState)) {
       const technicians =
         ticket.technicians?.filter((tech) => tech.enabled) || [];
       if (technicians.length === 0) {
         throw new BadRequestException('No hay técnicos asignados al ticket.');
       }
 
-      const technicianIds = technicians?.map((tech) => tech.id);
+      const technicianIds = technicians?.map((tech: any) => tech.id);
 
       const busyTickets = await this.databaseService.list(
         0,
@@ -194,8 +195,8 @@ export class TicketService {
         {
           filters: {
             'technicians.id': technicianIds,
-            'technicians.enabled': 'true',
-            'currentState.id': 'in_service',
+            'technicians.enabled': true,
+            'currentState.id': blockedStates,
           },
           exclude: {
             id: ticketId,
@@ -205,8 +206,8 @@ export class TicketService {
       );
 
       if (Array.isArray(busyTickets) && busyTickets.length > 0) {
-        throw new ForbiddenException(
-          'El técnico asignado ya está atendiendo otro ticket.',
+        throw new BadRequestException(
+          `El técnico asignado ya está atendiendo otro ticket ${busyTickets[0].ticket_number} estado ${busyTickets[0].currentState.label}`,
         );
       }
     }
@@ -328,8 +329,7 @@ export class TicketService {
   }
 
   async update(id: string, ticket: UpdateTicketDto) {
-    const updatedAt = new Date().toISOString();
-    ticket['updatedAt'] = updatedAt;
+    ticket['updatedAt'] = new Date().toISOString();
     return (
       (await this.databaseService.update(id, ticket, this.collectionName)) &&
       'Update successful'
@@ -914,15 +914,13 @@ export class TicketService {
       pendingPercentage: rateOpen,
     };
 
-    const summary = {
+    return {
       totalTickets,
       ticketsByStatus,
       ticketStatuses,
       closedVsPending,
       filters: filtersSummary,
     };
-
-    return summary;
   }
 
   transformTicketsByStatus(tickets: any[]): TicketsByStatus {
