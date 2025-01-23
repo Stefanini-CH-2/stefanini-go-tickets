@@ -1334,11 +1334,12 @@ export class TicketService {
     commerceId: string,
     dateRange?: 'today' | 'week' | 'month',
   ) {
+    const commercesId = JSON.parse(commerceId);
     const queryParams: QueryParams = {
       filters: {
-        commerceId: commerceId,
         'technicians.id': technicianId,
         'technicians.enabled': true,
+        ...(commercesId.length < 0 && commercesId),
       },
       fields: ['attentionType', 'currentState', 'commerceId', 'createdAt'],
       sort: { createdAt: 'desc' },
@@ -1380,10 +1381,37 @@ export class TicketService {
     let totalClosed = 0;
     let totalPending = 0;
 
-    const ticketsCountByType: Record<string, number> = {};
 
+    const ticketsCountByType: Record<string, Record<string, number>> = {};
+
+    // First, pre-populate all commerce stats with all attention types set to 0
+    if (Array.isArray(attentionTypesList)) {
+      for (const att of attentionTypesList) {
+        const commerce = await this.databaseService.get(
+          att.customerDni,
+          'commerces',
+          'id',
+        );
+        if (commerce?.name && Array.isArray(att.values)) {
+          ticketsCountByType[commerce.name] = {};
+          att.values.forEach((val) => {
+            if (val?.name) {
+              ticketsCountByType[commerce.name][val.name] = 0;
+            }
+          });
+        }
+      }
+    }
+
+    // Then count the actual tickets
     for (const ticket of Utils.mapRecord(TicketEntity, tickets)) {
+      const commerce = await this.databaseService.get(
+        ticket.commerceId,
+        'commerces',
+        'id',
+      );
       const currentStateId = ticket?.currentState?.id;
+
       if (currentStateId === 'closed') {
         totalClosed++;
       } else {
@@ -1392,7 +1420,7 @@ export class TicketService {
 
       const attentionTypeObject = Array.isArray(attentionTypesList)
         ? attentionTypesList.find(
-            (att) => att.customerDni === ticket?.commerceId,
+            (att) => att.customerDni === ticket.commerceId,
           )
         : null;
 
@@ -1400,24 +1428,13 @@ export class TicketService {
         const attentionType = attentionTypeObject.values.find(
           (val) => val.value == ticket?.attentionType,
         );
-        if (attentionType?.name) {
-          ticketsCountByType[attentionType.name] =
-            (ticketsCountByType[attentionType.name] || 0) + 1;
+        if (attentionType?.name && commerce?.name) {
+          ticketsCountByType[commerce.name][attentionType.name]++;
         }
       }
     }
-    if (Array.isArray(attentionTypesList)) {
-      attentionTypesList.forEach((att) => {
-        if (Array.isArray(att.values)) {
-          att.values.forEach((val) => {
-            if (val?.name && !(val.name in ticketsCountByType)) {
-              ticketsCountByType[val.name] = 0;
-            }
-          });
-        }
-      });
-    }
 
+    // Replace ticketsCountByType with ticketsCountByType in the return object
     return {
       technicianId,
       ticketsCountByType,
