@@ -43,7 +43,7 @@ export class TicketService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateMachine: StateMachineService,
-  ) {}
+  ) { }
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -568,13 +568,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-          ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-        )
+        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+      )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-          ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
-        )
+        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
+      )
       : [];
 
     const statesHistory = statesHistoryList
@@ -1373,7 +1373,10 @@ export class TicketService {
       0,
       999999,
       {
-        filters: { id: 'attentionType' },
+        filters: {
+          id: 'attentionType',
+          commerceId: commercesId[0]
+        },
       },
       'datas',
     );
@@ -1420,8 +1423,8 @@ export class TicketService {
 
       const attentionTypeObject = Array.isArray(attentionTypesList)
         ? attentionTypesList.find(
-            (att) => att.customerDni === ticket.commerceId,
-          )
+          (att) => att.customerDni === ticket.commerceId,
+        )
         : null;
 
       if (attentionTypeObject?.values?.length) {
