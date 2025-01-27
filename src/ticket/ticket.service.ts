@@ -43,7 +43,7 @@ export class TicketService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateMachine: StateMachineService,
-  ) { }
+  ) {}
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -532,7 +532,13 @@ export class TicketService {
       records.push(ticketResult);
     }
 
-    return records;
+    const fieldToSortBy = 'dateSla';
+    const isAscending = true;
+
+    return records.sort((a, b) => {
+      const result = a.ticket[fieldToSortBy] - b.ticket[fieldToSortBy];
+      return isAscending ? result : -result;
+    });
   }
 
   getOwnTicketElements(
@@ -568,13 +574,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-      )
+          ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+        )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
-      )
+          ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
+        )
       : [];
 
     const statesHistory = statesHistoryList
@@ -1377,7 +1383,7 @@ export class TicketService {
       {
         filters: {
           id: 'attentionType',
-          commerceId: commercesId[0]
+          commerceId: commercesId[0],
         },
       },
       'datas',
@@ -1385,7 +1391,6 @@ export class TicketService {
 
     let totalClosed = 0;
     let totalPending = 0;
-
 
     const ticketsCountByType: Record<string, Record<string, number>> = {};
 
@@ -1425,8 +1430,8 @@ export class TicketService {
 
       const attentionTypeObject = Array.isArray(attentionTypesList)
         ? attentionTypesList.find(
-          (att) => att.customerDni === ticket.commerceId,
-        )
+            (att) => att.customerDni === ticket.commerceId,
+          )
         : null;
 
       if (attentionTypeObject?.values?.length) {
