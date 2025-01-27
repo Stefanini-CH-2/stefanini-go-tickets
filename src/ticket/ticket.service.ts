@@ -577,6 +577,7 @@ export class TicketService {
 
   mapSuperTicket(
     ticket: {
+      ticketOriginalJson: any;
       id: any;
       ticket_number: any;
       description: any;
@@ -683,6 +684,7 @@ export class TicketService {
           (_priority) => _priority.value === ticket?.priority,
         ),
         currentState: ticket?.currentState,
+        originalTicket: ticket.ticketOriginalJson
       },
       commerce: {
         id: commerce?.id,
