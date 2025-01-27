@@ -633,6 +633,7 @@ export class TicketService {
       currentState: any;
       technicians: any[];
       dispatchers: any[];
+      ticketOriginalJson: any;
     },
     commerce: {
       id: any;
@@ -722,6 +723,7 @@ export class TicketService {
           (_priority) => _priority.value === ticket?.priority,
         ),
         currentState: ticket?.currentState,
+        clientTicket: ticket.ticketOriginalJson,
       },
       commerce: {
         id: commerce?.id,
