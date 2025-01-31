@@ -43,7 +43,7 @@ export class TicketService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateMachine: StateMachineService,
-  ) {}
+  ) { }
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -260,14 +260,78 @@ export class TicketService {
       queryParams,
       this.collectionName,
     );
-    queryParams.sort = { ...queryParams.sort, plannedDate: 'desc' };
-    const response = await this.databaseService.list(
-      start,
-      limit,
-      queryParams,
+
+    const filters = Object.entries(queryParams.filters || {}).map(([key, value]) => ({
+      [key]: { $in: Array.isArray(value) ? value : [value] }
+    }));
+
+    const search = Object.entries(queryParams.search || {}).map(([key, value]) => ({
+      [key]: { $regex: Array.isArray(value) ? value[0] : value, $options: 'i' }
+    }));
+
+    const sort = Object.entries(queryParams.sort || {}).map(([key, value]) => ({
+      [key]: parseInt(value as string) // Convert string value to number
+    }));
+
+
+    const pipeline = [
+      {
+        $match: {
+          $and: [
+            ...(filters.length > 0 ? filters : [{}]),
+            ...(search.length > 0 ? [{ $or: search }] : [{}])
+          ],
+        }
+      },
+      {
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [
+            {
+              $addFields: {
+                customSort: {
+                  $cond: {
+                    if: {
+                      $in: [
+                        '$currentState.label',
+                        ['Cerrado', 'Cancelado', 'Resuelto'],
+                      ],
+                    },
+                    then: 1,
+                    else: 0,
+                  },
+                },
+              }
+            },
+            {
+              $sort: sort.length > 0 
+                ? Object.assign({}, { customSort: 1, dateSla: 1 }, ...sort)
+                : { customSort: 1, dateSla: 1 }
+            },
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+            {
+              $project: {
+                _id: 0,
+                customSort: 0,
+              }
+            }
+          ]
+        }
+      },
+      {
+        $project: {
+          data: 1,
+          total: { $arrayElemAt: ['$metadata.total', 0] }
+        }
+      }
+    ];
+    const query = await this.databaseService.aggregate(
+      pipeline,
       this.collectionName,
     );
-    const tickets = Array.isArray(response) ? response : [];
+
+    const tickets = query[0].data ?? [];
 
     const {
       ticketsId,
@@ -532,13 +596,7 @@ export class TicketService {
       records.push(ticketResult);
     }
 
-    const fieldToSortBy = 'dateSla';
-    const isAscending = true;
-
-    return records.sort((a, b) => {
-      const result = a.ticket[fieldToSortBy] - b.ticket[fieldToSortBy];
-      return isAscending ? result : -result;
-    });
+    return records;
   }
 
   getOwnTicketElements(
@@ -574,13 +632,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-          ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-        )
+        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+      )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-          ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
-        )
+        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
+      )
       : [];
 
     const statesHistory = statesHistoryList
@@ -1430,8 +1488,8 @@ export class TicketService {
 
       const attentionTypeObject = Array.isArray(attentionTypesList)
         ? attentionTypesList.find(
-            (att) => att.customerDni === ticket.commerceId,
-          )
+          (att) => att.customerDni === ticket.commerceId,
+        )
         : null;
 
       if (attentionTypeObject?.values?.length) {
