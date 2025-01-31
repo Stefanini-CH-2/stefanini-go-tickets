@@ -28,9 +28,10 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "dayjs": "^1.11.13",
+    "pnpm": "^9.15.4",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
-    "stefaninigo": "^0.4.3",
+    "stefaninigo": "^0.4.4",
     "uuid": "^10.0.0",
     "xstate": "^5.18.2"
   },

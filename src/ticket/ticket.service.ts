@@ -1471,4 +1471,121 @@ export class TicketService {
   private async getTicketById(ticketId: string) {
     return await this.databaseService.get(ticketId, this.collectionName);
   }
+
+  async filtersMode(mode: string){
+    const pipeline = [
+      {
+        $lookup: {
+          from: "branches",
+          localField: "branchId",
+          foreignField: "id",
+          as: "branchInfo"
+        }
+      },
+      {
+        $unwind: {
+          path: "$branchInfo",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $group: {
+          _id: {
+            commerceId: "$commerceId",
+            attentionType: "$attentionType",
+            currentState: "$currentState",
+            region: "$branchInfo.region"
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            commerceId: "$_id.commerceId",
+            attentionType: "$_id.attentionType",
+            currentState: "$_id.currentState"
+          },
+          regions: {
+            $push: {
+              region: "$_id.region",
+              count: "$count"
+            }
+          },
+          count: { $sum: "$count" }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            commerceId: "$_id.commerceId",
+            attentionType: "$_id.attentionType"
+          },
+          states: {
+            $push: {
+              currentState: "$_id.currentState",
+              count: "$count",
+              regions: "$regions"
+            }
+          },
+          count: { $sum: "$count" }
+        }
+      },
+      {
+        $lookup: {
+          from: "datas",
+          let: {
+            cid: "$_id.commerceId",
+            attValue: "$_id.attentionType"
+          },
+          pipeline: [
+            { $match: { id: "attentionType" } },
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$commerceId", "$$cid"]
+                }
+              }
+            },
+            { $unwind: "$values" },
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$values.value", "$$attValue"]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                label: "$values.name"
+              }
+            }
+          ],
+          as: "typeInfo"
+        }
+      },
+      {
+        $unwind: {
+          path: "$typeInfo",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          commerceId: "$_id.commerceId",
+          attentionType: {
+            value: "$_id.attentionType",
+            label: "$typeInfo.label"
+          },
+          count: 1,
+          states: 1
+        }
+      }
+    ]    
+
+    const data = this.databaseService.aggregate(pipeline, this.collectionName);
+    return data;
+  }
 }
