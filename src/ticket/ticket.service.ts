@@ -43,7 +43,7 @@ export class TicketService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateMachine: StateMachineService,
-  ) { }
+  ) {}
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -532,7 +532,13 @@ export class TicketService {
       records.push(ticketResult);
     }
 
-    return records;
+    const fieldToSortBy = 'dateSla';
+    const isAscending = true;
+
+    return records.sort((a, b) => {
+      const result = a.ticket[fieldToSortBy] - b.ticket[fieldToSortBy];
+      return isAscending ? result : -result;
+    });
   }
 
   getOwnTicketElements(
@@ -568,13 +574,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-      )
+          ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+        )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
-      )
+          ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
+        )
       : [];
 
     const statesHistory = statesHistoryList
@@ -633,6 +639,7 @@ export class TicketService {
       currentState: any;
       technicians: any[];
       dispatchers: any[];
+      ticketOriginalJson: any;
     },
     commerce: {
       id: any;
@@ -722,6 +729,7 @@ export class TicketService {
           (_priority) => _priority.value === ticket?.priority,
         ),
         currentState: ticket?.currentState,
+        clientTicket: ticket.ticketOriginalJson,
       },
       commerce: {
         id: commerce?.id,
@@ -1375,7 +1383,7 @@ export class TicketService {
       {
         filters: {
           id: 'attentionType',
-          commerceId: commercesId[0]
+          commerceId: commercesId[0],
         },
       },
       'datas',
@@ -1383,7 +1391,6 @@ export class TicketService {
 
     let totalClosed = 0;
     let totalPending = 0;
-
 
     const ticketsCountByType: Record<string, Record<string, number>> = {};
 
@@ -1423,8 +1430,8 @@ export class TicketService {
 
       const attentionTypeObject = Array.isArray(attentionTypesList)
         ? attentionTypesList.find(
-          (att) => att.customerDni === ticket.commerceId,
-        )
+            (att) => att.customerDni === ticket.commerceId,
+          )
         : null;
 
       if (attentionTypeObject?.values?.length) {
@@ -1463,5 +1470,122 @@ export class TicketService {
 
   private async getTicketById(ticketId: string) {
     return await this.databaseService.get(ticketId, this.collectionName);
+  }
+
+  async filtersMode(mode: string){
+    const pipeline = [
+      {
+        $lookup: {
+          from: "branches",
+          localField: "branchId",
+          foreignField: "id",
+          as: "branchInfo"
+        }
+      },
+      {
+        $unwind: {
+          path: "$branchInfo",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $group: {
+          _id: {
+            commerceId: "$commerceId",
+            attentionType: "$attentionType",
+            currentState: "$currentState",
+            region: "$branchInfo.region"
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            commerceId: "$_id.commerceId",
+            attentionType: "$_id.attentionType",
+            currentState: "$_id.currentState"
+          },
+          regions: {
+            $push: {
+              region: "$_id.region",
+              count: "$count"
+            }
+          },
+          count: { $sum: "$count" }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            commerceId: "$_id.commerceId",
+            attentionType: "$_id.attentionType"
+          },
+          states: {
+            $push: {
+              currentState: "$_id.currentState",
+              count: "$count",
+              regions: "$regions"
+            }
+          },
+          count: { $sum: "$count" }
+        }
+      },
+      {
+        $lookup: {
+          from: "datas",
+          let: {
+            cid: "$_id.commerceId",
+            attValue: "$_id.attentionType"
+          },
+          pipeline: [
+            { $match: { id: "attentionType" } },
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$commerceId", "$$cid"]
+                }
+              }
+            },
+            { $unwind: "$values" },
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$values.value", "$$attValue"]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                label: "$values.name"
+              }
+            }
+          ],
+          as: "typeInfo"
+        }
+      },
+      {
+        $unwind: {
+          path: "$typeInfo",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          commerceId: "$_id.commerceId",
+          attentionType: {
+            value: "$_id.attentionType",
+            label: "$typeInfo.label"
+          },
+          count: 1,
+          states: 1
+        }
+      }
+    ]    
+
+    const data = this.databaseService.aggregate(pipeline, this.collectionName);
+    return data;
   }
 }

@@ -197,4 +197,9 @@ export class TicketController {
     );
     return result;
   }
+
+  @Get('filters/:mode')
+  async filtersMode(@Param('mode') mode: string){
+    return await this.ticketService.filtersMode(mode);
+  }
 }
