@@ -622,6 +622,8 @@ export class TicketService {
 
   mapSuperTicket(
     ticket: {
+      ticketDetails: any;
+      location: any;
       id: any;
       ticket_number: any;
       description: any;
@@ -719,6 +721,7 @@ export class TicketService {
         sla: ticket?.sla,
         numSla: ticket?.numSla,
         dateSla: ticket?.dateSla,
+        location: ticket?.location,
         attentionType: attentionType?.values?.find(
           (_attentionType) => _attentionType.value === ticket?.attentionType,
         ),
@@ -729,7 +732,7 @@ export class TicketService {
           (_priority) => _priority.value === ticket?.priority,
         ),
         currentState: ticket?.currentState,
-        clientTicket: ticket.ticketOriginalJson,
+        clientTicket: ticket.ticketDetails,
       },
       commerce: {
         id: commerce?.id,
@@ -1475,26 +1478,12 @@ export class TicketService {
   async filtersMode(mode: string){
     const pipeline = [
       {
-        $lookup: {
-          from: "branches",
-          localField: "branchId",
-          foreignField: "id",
-          as: "branchInfo"
-        }
-      },
-      {
-        $unwind: {
-          path: "$branchInfo",
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
         $group: {
           _id: {
             commerceId: "$commerceId",
             attentionType: "$attentionType",
             currentState: "$currentState",
-            region: "$branchInfo.region"
+            region: "$location.region"
           },
           count: { $sum: 1 }
         }
@@ -1583,7 +1572,7 @@ export class TicketService {
           states: 1
         }
       }
-    ]    
+    ];    
 
     const data = this.databaseService.aggregate(pipeline, this.collectionName);
     return data;
