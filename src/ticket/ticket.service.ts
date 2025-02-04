@@ -43,7 +43,7 @@ export class TicketService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateMachine: StateMachineService,
-  ) {}
+  ) { }
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -156,6 +156,7 @@ export class TicketService {
     ticketId: string,
     newState: string,
     newStateTicket?: NewStateTicketDto,
+    dispatcherId?: string
   ): Promise<any> {
     const ticket = await this.getTicketById(ticketId);
     if (!ticket) throw new NotFoundException('Ticket no encontrado');
@@ -243,6 +244,7 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
+      null,
       ticket.technicians,
       {
         coordinatedDate: ticket?.coordinatedDate,
@@ -574,13 +576,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-          ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-        )
+        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+      )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-          ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
-        )
+        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
+      )
       : [];
 
     const statesHistory = statesHistoryList
@@ -1032,6 +1034,8 @@ export class TicketService {
 
     const updatedAt = new Date().toISOString();
 
+
+
     const updatedTechnicians = [
       ...ticket?.technicians?.map((tech) => {
         if (tech.enabled) {
@@ -1068,6 +1072,7 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
+      dispatcher,
       updatedTechnicians,
     );
 
@@ -1161,6 +1166,7 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
+      dispatcher,
       updatedTechnicians,
     );
 
@@ -1281,6 +1287,7 @@ export class TicketService {
       ticket.currentState,
       targetState,
       updatedDispatchers,
+      currentDispatcher,
       updatedTechnicians,
     );
 
@@ -1293,6 +1300,7 @@ export class TicketService {
       ticket.currentState,
       targetStateTechnicianUnassigned,
       updatedDispatchers,
+      currentDispatcher,
       updatedTechnicians,
     );
 
@@ -1433,8 +1441,8 @@ export class TicketService {
 
       const attentionTypeObject = Array.isArray(attentionTypesList)
         ? attentionTypesList.find(
-            (att) => att.customerDni === ticket.commerceId,
-          )
+          (att) => att.customerDni === ticket.commerceId,
+        )
         : null;
 
       if (attentionTypeObject?.values?.length) {
@@ -1475,7 +1483,7 @@ export class TicketService {
     return await this.databaseService.get(ticketId, this.collectionName);
   }
 
-  async filtersMode(mode: string){
+  async filtersMode(mode: string) {
     const pipeline = [
       {
         $group: {
@@ -1572,7 +1580,7 @@ export class TicketService {
           states: 1
         }
       }
-    ];    
+    ];
 
     const data = this.databaseService.aggregate(pipeline, this.collectionName);
     return data;
