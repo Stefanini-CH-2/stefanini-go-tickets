@@ -11,7 +11,7 @@ export class StateMachineService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateHistory: StatesHistoryService,
-  ) {}
+  ) { }
 
   async getStateMachine(commerceId: string) {
     if (
@@ -58,6 +58,7 @@ export class StateMachineService {
     fromState: Record<string, string>,
     toState: Record<string, string>,
     dispatchers: { id: string; enabled: boolean; fullName: string }[],
+    dispatcher_: any,
     technicians: { id: string; enabled: boolean; fullName: string }[],
     customs?: Record<string, any>,
   ): Promise<void> {
@@ -89,8 +90,9 @@ export class StateMachineService {
       }
       return `Cambio de estado ${from?.label} al estado ${to?.label}.`;
     };
-
-    const dispatcher = getEnabledUser(dispatchers);
+    
+    const dispatcher = dispatcher_ ? dispatcher_ : getEnabledUser(dispatchers);
+    
     const technician = getEnabledUser(technicians);
     const lastTechnician = getLastTechnician(technicians);
 
