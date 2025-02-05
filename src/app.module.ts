@@ -7,7 +7,7 @@ import { DeviceModule } from './device/device.module';
 import { ConfigModule } from '@nestjs/config';
 import { AppointmentsModule } from './appointments/appointments.module';
 import configuration from './configuration';
-import { TicketMiddleware } from './ticket/ticket.middleware';
+// import { TicketMiddleware } from './ticket/ticket.middleware';
 
 @Module({
   imports: [
@@ -25,8 +25,8 @@ import { TicketMiddleware } from './ticket/ticket.middleware';
   ],
   providers: [],
 })
-export class AppModule implements NestModule{
-  configure(consumer: MiddlewareConsumer) {
+export class AppModule{
+  /* configure(consumer: MiddlewareConsumer) {
     consumer.apply(TicketMiddleware).forRoutes('*');
-  }
+  } */
 }

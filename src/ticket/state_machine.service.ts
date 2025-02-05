@@ -2,6 +2,9 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { StatesHistory } from 'src/states_history/dto/create-states-history.dto';
 import { StatesHistoryService } from 'src/states_history/states_history.service';
 import { DatabaseService } from 'stefaninigo';
+import { lastValueFrom } from 'rxjs/internal/lastValueFrom';
+import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class StateMachineService {
@@ -11,6 +14,8 @@ export class StateMachineService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateHistory: StatesHistoryService,
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
   ) { }
 
   async getStateMachine(commerceId: string) {
@@ -116,5 +121,18 @@ export class StateMachineService {
     };
 
     await this.stateHistory.create(stateHistory, commerceId);
+
+    const observerPayload = {
+      ticketId,
+      newState: toState.id,
+      clientId: customs.clientId || "",
+    };
+
+    try {
+      const observerUrl = `${this.configService.get<string>("observer.endpoint")}/state-changes`;
+      await lastValueFrom(this.httpService.post(observerUrl, observerPayload));
+    } catch (error) {
+      console.error(`Error al notificar al módulo observer: ${error.message}`);
+    }
   }
 }

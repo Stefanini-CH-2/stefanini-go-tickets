@@ -249,6 +249,7 @@ export class TicketService {
       {
         coordinatedDate: ticket?.coordinatedDate,
         coordinatedContactId: ticket?.coordinatedContactId,
+        clientId: ticket.clientId
       },
     );
 
@@ -1074,6 +1075,7 @@ export class TicketService {
       ticket.dispatchers,
       dispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId }
     );
 
     return `El técnico ${technician.firstName} ${technician.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el dispatchers ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
@@ -1168,6 +1170,7 @@ export class TicketService {
       ticket.dispatchers,
       dispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId }
     );
 
     return `El técnico ${technicianToUnassign.name} ha sido desasignado exitosamente del ticket ${ticket.ticket_number} por el dispatchers ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
@@ -1289,6 +1292,7 @@ export class TicketService {
       updatedDispatchers,
       currentDispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId }
     );
 
     const targetStateTechnicianUnassigned = stateMachine?.states?.find(
@@ -1302,6 +1306,7 @@ export class TicketService {
       updatedDispatchers,
       currentDispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId }
     );
 
     return `El dispatcher ${newDispatcher.firstName} ${newDispatcher.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el dispatcher ${currentDispatcher.firstName} ${currentDispatcher.firstSurname}. Todos los técnicos asignados previamente han sido desasignados.`;
