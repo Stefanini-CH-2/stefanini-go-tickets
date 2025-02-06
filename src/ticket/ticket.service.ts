@@ -43,7 +43,7 @@ export class TicketService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateMachine: StateMachineService,
-  ) {}
+  ) { }
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -156,6 +156,7 @@ export class TicketService {
     ticketId: string,
     newState: string,
     newStateTicket?: NewStateTicketDto,
+    dispatcherId?: string
   ): Promise<any> {
     const ticket = await this.getTicketById(ticketId);
     if (!ticket) throw new NotFoundException('Ticket no encontrado');
@@ -243,10 +244,12 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
+      null,
       ticket.technicians,
       {
         coordinatedDate: ticket?.coordinatedDate,
         coordinatedContactId: ticket?.coordinatedContactId,
+        clientId: ticket.clientId
       },
     );
 
@@ -574,13 +577,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-          ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-        )
+        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+      )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-          ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
-        )
+        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
+      )
       : [];
 
     const statesHistory = statesHistoryList
@@ -622,6 +625,8 @@ export class TicketService {
 
   mapSuperTicket(
     ticket: {
+      ticketDetails: any;
+      location: any;
       id: any;
       ticket_number: any;
       description: any;
@@ -719,6 +724,7 @@ export class TicketService {
         sla: ticket?.sla,
         numSla: ticket?.numSla,
         dateSla: ticket?.dateSla,
+        location: ticket?.location,
         attentionType: attentionType?.values?.find(
           (_attentionType) => _attentionType.value === ticket?.attentionType,
         ),
@@ -729,7 +735,7 @@ export class TicketService {
           (_priority) => _priority.value === ticket?.priority,
         ),
         currentState: ticket?.currentState,
-        clientTicket: ticket.ticketOriginalJson,
+        clientTicket: ticket.ticketDetails,
       },
       commerce: {
         id: commerce?.id,
@@ -1029,6 +1035,8 @@ export class TicketService {
 
     const updatedAt = new Date().toISOString();
 
+
+
     const updatedTechnicians = [
       ...ticket?.technicians?.map((tech) => {
         if (tech.enabled) {
@@ -1065,7 +1073,9 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
+      dispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId }
     );
 
     return `El técnico ${technician.firstName} ${technician.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el dispatchers ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
@@ -1158,7 +1168,9 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
+      dispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId }
     );
 
     return `El técnico ${technicianToUnassign.name} ha sido desasignado exitosamente del ticket ${ticket.ticket_number} por el dispatchers ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
@@ -1278,7 +1290,9 @@ export class TicketService {
       ticket.currentState,
       targetState,
       updatedDispatchers,
+      currentDispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId }
     );
 
     const targetStateTechnicianUnassigned = stateMachine?.states?.find(
@@ -1290,7 +1304,9 @@ export class TicketService {
       ticket.currentState,
       targetStateTechnicianUnassigned,
       updatedDispatchers,
+      currentDispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId }
     );
 
     return `El dispatcher ${newDispatcher.firstName} ${newDispatcher.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el dispatcher ${currentDispatcher.firstName} ${currentDispatcher.firstSurname}. Todos los técnicos asignados previamente han sido desasignados.`;
@@ -1430,8 +1446,8 @@ export class TicketService {
 
       const attentionTypeObject = Array.isArray(attentionTypesList)
         ? attentionTypesList.find(
-            (att) => att.customerDni === ticket.commerceId,
-          )
+          (att) => att.customerDni === ticket.commerceId,
+        )
         : null;
 
       if (attentionTypeObject?.values?.length) {
@@ -1472,29 +1488,15 @@ export class TicketService {
     return await this.databaseService.get(ticketId, this.collectionName);
   }
 
-  async filtersMode(mode: string){
+  async filtersMode(mode: string) {
     const pipeline = [
-      {
-        $lookup: {
-          from: "branches",
-          localField: "branchId",
-          foreignField: "id",
-          as: "branchInfo"
-        }
-      },
-      {
-        $unwind: {
-          path: "$branchInfo",
-          preserveNullAndEmptyArrays: true
-        }
-      },
       {
         $group: {
           _id: {
             commerceId: "$commerceId",
             attentionType: "$attentionType",
             currentState: "$currentState",
-            region: "$branchInfo.region"
+            region: "$location.region"
           },
           count: { $sum: 1 }
         }
@@ -1583,7 +1585,7 @@ export class TicketService {
           states: 1
         }
       }
-    ]    
+    ];
 
     const data = this.databaseService.aggregate(pipeline, this.collectionName);
     return data;

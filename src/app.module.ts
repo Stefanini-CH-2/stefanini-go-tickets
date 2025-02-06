@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { TicketModule } from './ticket/ticket.module';
 import { EvidenceModule } from './evidence/evidence.module';
 import { CommentModule } from './comment/comment.module';
@@ -7,6 +7,7 @@ import { DeviceModule } from './device/device.module';
 import { ConfigModule } from '@nestjs/config';
 import { AppointmentsModule } from './appointments/appointments.module';
 import configuration from './configuration';
+// import { TicketMiddleware } from './ticket/ticket.middleware';
 
 @Module({
   imports: [
@@ -24,4 +25,8 @@ import configuration from './configuration';
   ],
   providers: [],
 })
-export class AppModule {}
+export class AppModule{
+  /* configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TicketMiddleware).forRoutes('*');
+  } */
+}

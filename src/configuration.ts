@@ -20,4 +20,7 @@ export default () => ({
       region: process.env.AWS_REGION,
     },
   },
+  observer: {
+    endpoint: process.env.OBSERVER_ENDPOINT || '',
+  },
 });

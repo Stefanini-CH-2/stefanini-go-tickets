@@ -2,6 +2,10 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { StatesHistory } from 'src/states_history/dto/create-states-history.dto';
 import { StatesHistoryService } from 'src/states_history/states_history.service';
 import { DatabaseService } from 'stefaninigo';
+import { lastValueFrom } from 'rxjs/internal/lastValueFrom';
+import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
+import e from 'express';
 
 @Injectable()
 export class StateMachineService {
@@ -11,7 +15,9 @@ export class StateMachineService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateHistory: StatesHistoryService,
-  ) {}
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) { }
 
   async getStateMachine(commerceId: string) {
     if (
@@ -58,6 +64,7 @@ export class StateMachineService {
     fromState: Record<string, string>,
     toState: Record<string, string>,
     dispatchers: { id: string; enabled: boolean; fullName: string }[],
+    dispatcher_: any,
     technicians: { id: string; enabled: boolean; fullName: string }[],
     customs?: Record<string, any>,
   ): Promise<void> {
@@ -89,8 +96,9 @@ export class StateMachineService {
       }
       return `Cambio de estado ${from?.label} al estado ${to?.label}.`;
     };
-
-    const dispatcher = getEnabledUser(dispatchers);
+    
+    const dispatcher = dispatcher_ ? dispatcher_ : getEnabledUser(dispatchers);
+    
     const technician = getEnabledUser(technicians);
     const lastTechnician = getLastTechnician(technicians);
 
@@ -114,5 +122,20 @@ export class StateMachineService {
     };
 
     await this.stateHistory.create(stateHistory, commerceId);
+
+    const observerPayload = {
+      ticketId,
+      newState: toState.id,
+      clientId: customs.clientId || "",
+    };
+
+    try {
+      const observerUrl = `${this.configService.get<string>("observer.endpoint")}/state-changes`;
+      console.log(observerUrl, JSON.stringify(observerPayload))
+      await lastValueFrom(this.httpService.post(observerUrl, observerPayload));
+    } catch (error) {
+      console.error(`Error al notificar al módulo observer: ${error.message}`);
+      console.error(error)
+    }
   }
 }
