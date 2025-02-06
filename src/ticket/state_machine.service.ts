@@ -5,7 +5,6 @@ import { DatabaseService } from 'stefaninigo';
 import { lastValueFrom } from 'rxjs/internal/lastValueFrom';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import e from 'express';
 
 @Injectable()
 export class StateMachineService {
