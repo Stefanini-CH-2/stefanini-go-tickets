@@ -5,6 +5,8 @@ import { DatabaseService } from 'stefaninigo';
 import { lastValueFrom } from 'rxjs/internal/lastValueFrom';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class StateMachineService {
@@ -16,7 +18,9 @@ export class StateMachineService {
     private readonly stateHistory: StatesHistoryService,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-  ) { }
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+  ) {
+  }
 
   async getStateMachine(commerceId: string) {
     if (
@@ -130,11 +134,9 @@ export class StateMachineService {
 
     try {
       const observerUrl = `${this.configService.get<string>("observer.endpoint")}/state-changes`;
-      console.log(observerUrl, JSON.stringify(observerPayload))
       await lastValueFrom(this.httpService.post(observerUrl, observerPayload));
     } catch (error) {
       console.error(`Error al notificar al módulo observer: ${error.message}`);
-      console.error(error)
     }
   }
 }
