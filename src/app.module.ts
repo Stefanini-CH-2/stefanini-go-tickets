@@ -7,10 +7,12 @@ import { DeviceModule } from './device/device.module';
 import { ConfigModule } from '@nestjs/config';
 import { AppointmentsModule } from './appointments/appointments.module';
 import configuration from './configuration';
-// import { TicketMiddleware } from './ticket/ticket.middleware';
+import { TicketMiddleware } from './ticket/ticket.middleware';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
+    CacheModule.register({isGlobal: true}),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
@@ -26,7 +28,7 @@ import configuration from './configuration';
   providers: [],
 })
 export class AppModule{
-  /* configure(consumer: MiddlewareConsumer) {
+  configure(consumer: MiddlewareConsumer) {
     consumer.apply(TicketMiddleware).forRoutes('*');
-  } */
+  }
 }
