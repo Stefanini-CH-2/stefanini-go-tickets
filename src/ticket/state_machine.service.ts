@@ -137,6 +137,7 @@ export class StateMachineService {
       await lastValueFrom(this.httpService.post(observerUrl, observerPayload));
     } catch (error) {
       console.error(`Error al notificar al módulo observer: ${error.message}`);
+      console.error(error);
     }
   }
 }
