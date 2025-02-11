@@ -11,7 +11,7 @@ import { HttpModule } from '@nestjs/axios';
     DatabaseModule.forRootAsync([
       { name: 'mongodb', provider: DatabaseModule.PROVIDERS.MONGODB },
     ]),
-    HttpModule
+    HttpModule,
   ],
   controllers: [TicketController],
   providers: [TicketService, StatesHistoryService, StateMachineService],

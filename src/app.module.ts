@@ -12,7 +12,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
-    CacheModule.register({isGlobal: true}),
+    CacheModule.register({ isGlobal: true }),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
@@ -27,7 +27,7 @@ import { CacheModule } from '@nestjs/cache-manager';
   ],
   providers: [],
 })
-export class AppModule{
+export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(TicketMiddleware).forRoutes('*');
   }
