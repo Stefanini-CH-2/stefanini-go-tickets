@@ -10,18 +10,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { DatabaseService, QueryParams } from 'stefaninigo';
 import { HttpService } from '@nestjs/axios';
 import configuration from '../configuration';
-import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 
 @Injectable()
 export class StatesHistoryService implements OnModuleInit {
   private collectionName: string = 'states_history';
   private statesCollection: string = 'datas';
-  private token: string;
 
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly httpService: HttpService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async onModuleInit() {
@@ -74,11 +71,6 @@ export class StatesHistoryService implements OnModuleInit {
       if (states.stateId == 'rechudule') {
         const getOdsUrl = await this.httpService.axiosRef.get(
           `${configuration().ods.endpoint}/orders/${states.ticketId}/url/?commerceId=${states.commerceId}`,
-          {
-            headers: {
-              Authorization: `${this.token}`,
-            },
-          },
         );
         states['odsUrl'] = getOdsUrl.data.url;
       }
@@ -146,11 +138,6 @@ export class StatesHistoryService implements OnModuleInit {
     if (states.stateId == 'rechudule') {
       const getOdsUrl = await this.httpService.axiosRef.get(
         `${configuration().ods.endpoint}/orders/${states.ticketId}/url/?commerceId=${states.commerceId}`,
-        {
-          headers: {
-            Authorization: `${this.token}`,
-          },
-        },
       );
       states['odsUrl'] = getOdsUrl.data.url;
     }
