@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  NotFoundException,
-  OnModuleInit,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { StatesHistory } from './dto/create-states-history.dto';
 import { UpdateStatesHistoryDto } from './dto/update-states-history.dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -12,7 +7,7 @@ import { HttpService } from '@nestjs/axios';
 import configuration from '../configuration';
 
 @Injectable()
-export class StatesHistoryService implements OnModuleInit {
+export class StatesHistoryService {
   private collectionName: string = 'states_history';
   private statesCollection: string = 'datas';
 
@@ -20,13 +15,6 @@ export class StatesHistoryService implements OnModuleInit {
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly httpService: HttpService,
   ) {}
-
-  async onModuleInit() {
-    const getToken = await this.cacheManager.get('token');
-    if (getToken) {
-      this.token = getToken as string;
-    }
-  }
 
   async create(
     states: StatesHistory | StatesHistory[],
