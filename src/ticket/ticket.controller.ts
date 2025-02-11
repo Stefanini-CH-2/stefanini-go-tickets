@@ -199,7 +199,7 @@ export class TicketController {
   }
 
   @Get('filters/:mode')
-  async filtersMode(@Param('mode') mode: string){
+  async filtersMode(@Param('mode') mode: string) {
     return await this.ticketService.filtersMode(mode);
   }
 }
