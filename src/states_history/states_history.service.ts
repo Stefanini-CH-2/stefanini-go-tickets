@@ -3,13 +3,17 @@ import { StatesHistory } from './dto/create-states-history.dto';
 import { UpdateStatesHistoryDto } from './dto/update-states-history.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseService, QueryParams } from 'stefaninigo';
+import { HttpService } from '@nestjs/axios';
+import configuration from '../configuration';
 
 @Injectable()
 export class StatesHistoryService {
   private collectionName: string = 'states_history';
   private statesCollection: string = 'datas';
+
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
+    private readonly httpService: HttpService,
   ) {}
 
   async create(
@@ -52,6 +56,12 @@ export class StatesHistoryService {
     } else {
       const id = uuidv4();
       const mappedState = mapState(states.stateId);
+      if (states.stateId == 'rechudule') {
+        const getOdsUrl = await this.httpService.axiosRef.get(
+          `${configuration().ods.endpoint}/orders/${states.ticketId}/url/?commerceId=${states.commerceId}`,
+        );
+        states['odsUrl'] = getOdsUrl.data.url;
+      }
       await this.databaseService.create(
         {
           id,
@@ -112,8 +122,13 @@ export class StatesHistoryService {
   }
 
   async update(id: string, states: UpdateStatesHistoryDto) {
-    const updatedAt = new Date().toISOString();
-    states['updatedAt'] = updatedAt;
+    states['updatedAt'] = new Date().toISOString();
+    if (states.stateId == 'rechudule') {
+      const getOdsUrl = await this.httpService.axiosRef.get(
+        `${configuration().ods.endpoint}/orders/${states.ticketId}/url/?commerceId=${states.commerceId}`,
+      );
+      states['odsUrl'] = getOdsUrl.data.url;
+    }
     return (
       (await this.databaseService.update(id, states, this.collectionName)) &&
       'Update successful'

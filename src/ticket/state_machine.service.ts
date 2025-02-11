@@ -19,8 +19,7 @@ export class StateMachineService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) {
-  }
+  ) {}
 
   async getStateMachine(commerceId: string) {
     if (
@@ -99,9 +98,9 @@ export class StateMachineService {
       }
       return `Cambio de estado ${from?.label} al estado ${to?.label}.`;
     };
-    
+
     const dispatcher = dispatcher_ ? dispatcher_ : getEnabledUser(dispatchers);
-    
+
     const technician = getEnabledUser(technicians);
     const lastTechnician = getLastTechnician(technicians);
 
@@ -129,11 +128,11 @@ export class StateMachineService {
     const observerPayload = {
       ticketId,
       newState: toState.id,
-      clientId: customs.clientId || "",
+      clientId: customs.clientId || '',
     };
 
     try {
-      const observerUrl = `${this.configService.get<string>("observer.endpoint")}/state-changes`;
+      const observerUrl = `${this.configService.get<string>('observer.endpoint')}/state-changes`;
       await lastValueFrom(this.httpService.post(observerUrl, observerPayload));
     } catch (error) {
       console.error(`Error al notificar al módulo observer: ${error.message}`);

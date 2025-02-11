@@ -43,7 +43,7 @@ export class TicketService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly stateMachine: StateMachineService,
-  ) { }
+  ) {}
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -156,7 +156,7 @@ export class TicketService {
     ticketId: string,
     newState: string,
     newStateTicket?: NewStateTicketDto,
-    dispatcherId?: string
+    dispatcherId?: string,
   ): Promise<any> {
     const ticket = await this.getTicketById(ticketId);
     if (!ticket) throw new NotFoundException('Ticket no encontrado');
@@ -249,7 +249,7 @@ export class TicketService {
       {
         coordinatedDate: ticket?.coordinatedDate,
         coordinatedContactId: ticket?.coordinatedContactId,
-        clientId: ticket.clientId
+        clientId: ticket.clientId,
       },
     );
 
@@ -577,13 +577,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-      )
+          ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+        )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
-      )
+          ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
+        )
       : [];
 
     const statesHistory = statesHistoryList
@@ -1035,8 +1035,6 @@ export class TicketService {
 
     const updatedAt = new Date().toISOString();
 
-
-
     const updatedTechnicians = [
       ...ticket?.technicians?.map((tech) => {
         if (tech.enabled) {
@@ -1075,7 +1073,7 @@ export class TicketService {
       ticket.dispatchers,
       dispatcher,
       updatedTechnicians,
-      { clientId: ticket.clientId }
+      { clientId: ticket.clientId },
     );
 
     return `El técnico ${technician.firstName} ${technician.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el dispatchers ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
@@ -1170,7 +1168,7 @@ export class TicketService {
       ticket.dispatchers,
       dispatcher,
       updatedTechnicians,
-      { clientId: ticket.clientId }
+      { clientId: ticket.clientId },
     );
 
     return `El técnico ${technicianToUnassign.name} ha sido desasignado exitosamente del ticket ${ticket.ticket_number} por el dispatchers ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
@@ -1292,7 +1290,7 @@ export class TicketService {
       updatedDispatchers,
       currentDispatcher,
       updatedTechnicians,
-      { clientId: ticket.clientId }
+      { clientId: ticket.clientId },
     );
 
     const targetStateTechnicianUnassigned = stateMachine?.states?.find(
@@ -1306,7 +1304,7 @@ export class TicketService {
       updatedDispatchers,
       currentDispatcher,
       updatedTechnicians,
-      { clientId: ticket.clientId }
+      { clientId: ticket.clientId },
     );
 
     return `El dispatcher ${newDispatcher.firstName} ${newDispatcher.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el dispatcher ${currentDispatcher.firstName} ${currentDispatcher.firstSurname}. Todos los técnicos asignados previamente han sido desasignados.`;
@@ -1446,8 +1444,8 @@ export class TicketService {
 
       const attentionTypeObject = Array.isArray(attentionTypesList)
         ? attentionTypesList.find(
-          (att) => att.customerDni === ticket.commerceId,
-        )
+            (att) => att.customerDni === ticket.commerceId,
+          )
         : null;
 
       if (attentionTypeObject?.values?.length) {
@@ -1493,98 +1491,98 @@ export class TicketService {
       {
         $group: {
           _id: {
-            commerceId: "$commerceId",
-            attentionType: "$attentionType",
-            currentState: "$currentState",
-            region: "$location.region"
+            commerceId: '$commerceId',
+            attentionType: '$attentionType',
+            currentState: '$currentState',
+            region: '$location.region',
           },
-          count: { $sum: 1 }
-        }
+          count: { $sum: 1 },
+        },
       },
       {
         $group: {
           _id: {
-            commerceId: "$_id.commerceId",
-            attentionType: "$_id.attentionType",
-            currentState: "$_id.currentState"
+            commerceId: '$_id.commerceId',
+            attentionType: '$_id.attentionType',
+            currentState: '$_id.currentState',
           },
           regions: {
             $push: {
-              region: "$_id.region",
-              count: "$count"
-            }
+              region: '$_id.region',
+              count: '$count',
+            },
           },
-          count: { $sum: "$count" }
-        }
+          count: { $sum: '$count' },
+        },
       },
       {
         $group: {
           _id: {
-            commerceId: "$_id.commerceId",
-            attentionType: "$_id.attentionType"
+            commerceId: '$_id.commerceId',
+            attentionType: '$_id.attentionType',
           },
           states: {
             $push: {
-              currentState: "$_id.currentState",
-              count: "$count",
-              regions: "$regions"
-            }
+              currentState: '$_id.currentState',
+              count: '$count',
+              regions: '$regions',
+            },
           },
-          count: { $sum: "$count" }
-        }
+          count: { $sum: '$count' },
+        },
       },
       {
         $lookup: {
-          from: "datas",
+          from: 'datas',
           let: {
-            cid: "$_id.commerceId",
-            attValue: "$_id.attentionType"
+            cid: '$_id.commerceId',
+            attValue: '$_id.attentionType',
           },
           pipeline: [
-            { $match: { id: "attentionType" } },
+            { $match: { id: 'attentionType' } },
             {
               $match: {
                 $expr: {
-                  $eq: ["$commerceId", "$$cid"]
-                }
-              }
+                  $eq: ['$commerceId', '$$cid'],
+                },
+              },
             },
-            { $unwind: "$values" },
+            { $unwind: '$values' },
             {
               $match: {
                 $expr: {
-                  $eq: ["$values.value", "$$attValue"]
-                }
-              }
+                  $eq: ['$values.value', '$$attValue'],
+                },
+              },
             },
             {
               $project: {
                 _id: 0,
-                label: "$values.name"
-              }
-            }
+                label: '$values.name',
+              },
+            },
           ],
-          as: "typeInfo"
-        }
+          as: 'typeInfo',
+        },
       },
       {
         $unwind: {
-          path: "$typeInfo",
-          preserveNullAndEmptyArrays: true
-        }
+          path: '$typeInfo',
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $project: {
           _id: 0,
-          commerceId: "$_id.commerceId",
+          commerceId: '$_id.commerceId',
           attentionType: {
-            value: "$_id.attentionType",
-            label: "$typeInfo.label"
+            value: '$_id.attentionType',
+            label: '$typeInfo.label',
           },
           count: 1,
-          states: 1
-        }
-      }
+          states: 1,
+        },
+      },
     ];
 
     const data = this.databaseService.aggregate(pipeline, this.collectionName);
