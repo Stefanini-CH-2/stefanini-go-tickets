@@ -1,16 +1,35 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { StatesHistory } from './dto/create-states-history.dto';
 import { UpdateStatesHistoryDto } from './dto/update-states-history.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseService, QueryParams } from 'stefaninigo';
+import { HttpService } from '@nestjs/axios';
+import configuration from '../configuration';
+import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 
 @Injectable()
-export class StatesHistoryService {
+export class StatesHistoryService implements OnModuleInit {
   private collectionName: string = 'states_history';
   private statesCollection: string = 'datas';
+  private token: string;
+
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
+    private readonly httpService: HttpService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
+
+  async onModuleInit() {
+    const getToken = await this.cacheManager.get('token');
+    if (getToken) {
+      this.token = getToken as string;
+    }
+  }
 
   async create(
     states: StatesHistory | StatesHistory[],
@@ -52,6 +71,17 @@ export class StatesHistoryService {
     } else {
       const id = uuidv4();
       const mappedState = mapState(states.stateId);
+      if (states.stateId == 'rechudule') {
+        const getOdsUrl = await this.httpService.axiosRef.get(
+          `${configuration().ods.endpoint}/orders/${states.ticketId}/url/?commerceId=${states.commerceId}`,
+          {
+            headers: {
+              Authorization: `${this.token}`,
+            },
+          },
+        );
+        states['odsUrl'] = getOdsUrl.data.url;
+      }
       await this.databaseService.create(
         {
           id,
@@ -112,8 +142,18 @@ export class StatesHistoryService {
   }
 
   async update(id: string, states: UpdateStatesHistoryDto) {
-    const updatedAt = new Date().toISOString();
-    states['updatedAt'] = updatedAt;
+    states['updatedAt'] = new Date().toISOString();
+    if (states.stateId == 'rechudule') {
+      const getOdsUrl = await this.httpService.axiosRef.get(
+        `${configuration().ods.endpoint}/orders/${states.ticketId}/url/?commerceId=${states.commerceId}`,
+        {
+          headers: {
+            Authorization: `${this.token}`,
+          },
+        },
+      );
+      states['odsUrl'] = getOdsUrl.data.url;
+    }
     return (
       (await this.databaseService.update(id, states, this.collectionName)) &&
       'Update successful'
