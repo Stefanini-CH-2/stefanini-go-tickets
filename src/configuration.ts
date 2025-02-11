@@ -21,7 +21,7 @@ export default () => ({
     },
   },
   ods: {
-    endpoint: process.env.APP_DOMAIN || '',
+    endpoint: process.env.ODS_BASE_URL || '',
   },
   observer: {
     endpoint: process.env.OBSERVER_ENDPOINT || '',

@@ -4,7 +4,7 @@ import { UpdateStatesHistoryDto } from './dto/update-states-history.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseService, QueryParams } from 'stefaninigo';
 import { HttpService } from '@nestjs/axios';
-import configuration from '../configuration';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class StatesHistoryService {
@@ -14,6 +14,7 @@ export class StatesHistoryService {
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(
@@ -56,11 +57,11 @@ export class StatesHistoryService {
     } else {
       const id = uuidv4();
       const mappedState = mapState(states.stateId);
-      if (states.stateId == 'rechudule') {
-        const getOdsUrl = await this.httpService.axiosRef.get(
-          `${configuration().ods.endpoint}/orders/${states.ticketId}/url/?commerceId=${states.commerceId}`,
-        );
-        states['odsUrl'] = getOdsUrl.data.url;
+      if (states.stateId == 'reschedule') {
+        const baseUrl = `${this.configService.get<string>('ods.endpoint')}`;
+        const url = `${baseUrl}/orders/${states.ticketId}/commerce/${states.commerceId}/url`;
+        const getOdsUrl = await this.httpService.axiosRef.get(url);
+        states.customs.odsUrl = getOdsUrl.data.url;
       }
       await this.databaseService.create(
         {
@@ -124,9 +125,8 @@ export class StatesHistoryService {
   async update(id: string, states: UpdateStatesHistoryDto) {
     states['updatedAt'] = new Date().toISOString();
     if (states.stateId == 'rechudule') {
-      const getOdsUrl = await this.httpService.axiosRef.get(
-        `${configuration().ods.endpoint}/orders/${states.ticketId}/url/?commerceId=${states.commerceId}`,
-      );
+      const url = `${this.configService.get<string>('ods.endpoint')}/orders/${states.ticketId}/commerce/${states.commerceId}/url`;
+      const getOdsUrl = await this.httpService.axiosRef.get(url);
       states['odsUrl'] = getOdsUrl.data.url;
     }
     return (
