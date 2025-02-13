@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TicketService } from './ticket.service';
 import { TicketController } from './ticket.controller';
-import { DatabaseModule } from 'stefaninigo';
+import { DatabaseModule, StorageModule } from 'stefaninigo';
 import { StateMachineService } from './state_machine.service';
 import { StatesHistoryService } from 'src/states_history/states_history.service';
 import { HttpModule } from '@nestjs/axios';
@@ -10,6 +10,7 @@ import { HttpModule } from '@nestjs/axios';
   imports: [
     DatabaseModule.forRootAsync([
       { name: 'mongodb', provider: DatabaseModule.PROVIDERS.MONGODB },
+      { name: 's3', provider: StorageModule.PROVIDERS.S3 },
     ]),
     HttpModule,
   ],

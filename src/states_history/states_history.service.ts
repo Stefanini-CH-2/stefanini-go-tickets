@@ -57,16 +57,6 @@ export class StatesHistoryService {
     } else {
       const id = uuidv4();
       const mappedState = mapState(states.stateId);
-      if (states.stateId == 'reschedule') {
-        const baseUrl = `${this.configService.get<string>('ods.endpoint')}`;
-        const url = `${baseUrl}/orders/${states.ticketId}/commerce/${states.commerceId}/url`;
-        const getOdsUrl = await this.httpService.axiosRef.get(url);
-        states.customs.ods = {
-          fileName:getOdsUrl.data.url.fileName,
-          path:getOdsUrl.data.url.path,
-          url:getOdsUrl.data.url.url
-        };
-      }
       await this.databaseService.create(
         {
           id,
