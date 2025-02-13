@@ -61,7 +61,11 @@ export class StatesHistoryService {
         const baseUrl = `${this.configService.get<string>('ods.endpoint')}`;
         const url = `${baseUrl}/orders/${states.ticketId}/commerce/${states.commerceId}/url`;
         const getOdsUrl = await this.httpService.axiosRef.get(url);
-        states.customs.odsUrl = getOdsUrl.data.url;
+        states.customs.ods = {
+          fileName:getOdsUrl.data.url.fileName,
+          path:getOdsUrl.data.url.path,
+          url:getOdsUrl.data.url.url
+        };
       }
       await this.databaseService.create(
         {
