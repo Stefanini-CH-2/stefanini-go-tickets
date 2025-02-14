@@ -9,7 +9,7 @@ import {
 import { TicketEntity } from './entities/ticket.entity';
 import { Ticket } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { DatabaseService, QueryParams } from 'stefaninigo';
+import { DatabaseService, QueryParams, StorageService } from 'stefaninigo';
 import { v4 as uuidv4 } from 'uuid';
 import { StatesHistory } from 'src/states_history/dto/create-states-history.dto';
 import { Utils } from 'src/utils/utils';
@@ -42,6 +42,7 @@ export class TicketService {
 
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
+    @Inject('s3') private readonly storageService: StorageService,
     private readonly stateMachine: StateMachineService,
   ) {}
 
@@ -592,6 +593,16 @@ export class TicketService {
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
+      
+      statesHistoryList = statesHistoryList.map(sh=> {
+        if(sh.stateId === 'reschedule' && sh.custom?.fileName && sh.custom?.filePath){
+          return {
+            ...sh,
+            url: this.storageService.getFileUrl(sh.custom.fileName, sh.custom.filePath)
+          }
+        }
+        return sh;
+      });
 
     const comments = commentsList?.filter(
       (comment) => comment.ticketId === ticket.id,

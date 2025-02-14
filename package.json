@@ -34,7 +34,7 @@
     "pnpm": "^9.15.4",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
-    "stefaninigo": "^0.4.4",
+    "stefaninigo": "^0.4.6",
     "uuid": "^10.0.0",
     "xstate": "^5.18.2"
   },
