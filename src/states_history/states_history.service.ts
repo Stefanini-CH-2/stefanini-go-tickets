@@ -3,25 +3,40 @@ import { StatesHistory } from './dto/create-states-history.dto';
 import { UpdateStatesHistoryDto } from './dto/update-states-history.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseService, QueryParams } from 'stefaninigo';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class StatesHistoryService {
   private collectionName: string = 'states_history';
   private statesCollection: string = 'datas';
+
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
   ) {}
 
-  async create(states: StatesHistory | StatesHistory[], commerceId: string): Promise<string[]> {
+  async create(
+    states: StatesHistory | StatesHistory[],
+    commerceId: string,
+  ): Promise<string[]> {
     const createdAt = new Date().toISOString();
 
-    const stateMachines = await this.databaseService.list(0, 1, { filters: { commerceId, id: "state_machine" } }, this.statesCollection);
+    const stateMachines = await this.databaseService.list(
+      0,
+      1,
+      { filters: { commerceId, id: 'state_machine' } },
+      this.statesCollection,
+    );
     if (Array.isArray(stateMachines) && !stateMachines.length) {
       throw new NotFoundException('Máquina de estados no encontrada');
     }
     const stateMachine = stateMachines[0];
     const mapState = (stateId: string) => {
-      const foundState = stateMachine?.states?.find((state: { id: string }) => state.id === stateId);
+      const foundState = stateMachine?.states?.find(
+        (state: { id: string }) => state.id === stateId,
+      );
       return foundState
         ? { name: foundState.label, value: foundState.id }
         : { name: stateId, value: stateId };
@@ -49,14 +64,17 @@ export class StatesHistoryService {
           state: mappedState,
           createdAt,
         },
-        this.collectionName
+        this.collectionName,
       );
       return [id];
     }
   }
 
   async get(id: string) {
-    const stateHistory = await this.databaseService.get(id, this.collectionName);
+    const stateHistory = await this.databaseService.get(
+      id,
+      this.collectionName,
+    );
     if (!stateHistory) {
       throw new NotFoundException('States not found');
     }
@@ -64,7 +82,10 @@ export class StatesHistoryService {
   }
 
   async delete(id: string) {
-    const stateHistory = await this.databaseService.get(id, this.collectionName);
+    const stateHistory = await this.databaseService.get(
+      id,
+      this.collectionName,
+    );
     if (!stateHistory) {
       throw new NotFoundException('State not found');
     }
@@ -76,8 +97,16 @@ export class StatesHistoryService {
   async list(page: number, limit: number, queryParams: QueryParams) {
     page = page <= 0 ? 1 : page;
     const start = (page - 1) * limit;
-    const total = await this.databaseService.count(queryParams, this.collectionName);
-    const records = await this.databaseService.list(start, limit, queryParams, this.collectionName);
+    const total = await this.databaseService.count(
+      queryParams,
+      this.collectionName,
+    );
+    const records = await this.databaseService.list(
+      start,
+      limit,
+      queryParams,
+      this.collectionName,
+    );
 
     return {
       total,
@@ -88,10 +117,15 @@ export class StatesHistoryService {
   }
 
   async update(id: string, states: UpdateStatesHistoryDto) {
-    const updatedAt = new Date().toISOString();
-    states["updatedAt"] = updatedAt;
+    states['updatedAt'] = new Date().toISOString();
+    if (states.stateId == 'rechudule') {
+      const url = `${this.configService.get<string>('ods.endpoint')}/orders/${states.ticketId}/commerce/${states.commerceId}/url`;
+      const getOdsUrl = await this.httpService.axiosRef.get(url);
+      states['odsUrl'] = getOdsUrl.data.url;
+    }
     return (
-      (await this.databaseService.update(id, states, this.collectionName)) && 'Update successful'
+      (await this.databaseService.update(id, states, this.collectionName)) &&
+      'Update successful'
     );
   }
 }

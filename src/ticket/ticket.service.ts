@@ -6,14 +6,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { TicketEntity } from './entities/ticket.entity';
 import { Ticket } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { DatabaseService, QueryParams } from 'stefaninigo';
+import { DatabaseService, QueryParams, StorageService } from 'stefaninigo';
 import { v4 as uuidv4 } from 'uuid';
 import { StatesHistory } from 'src/states_history/dto/create-states-history.dto';
 import { Utils } from 'src/utils/utils';
 import { Evidence } from 'src/evidence/dto/create-evidence.dto';
-import { Comment } from 'src/comment/dto/create-comment.dto';
+import { CreateCommentDto } from 'src/comment/dto/create-comment.dto';
 import { EmployeeRole, Provider } from './enums';
 import * as dayjs from 'dayjs';
 import { StateMachineService } from './state_machine.service';
@@ -30,7 +31,7 @@ interface TransformedTicket {
   appointmentStatus?: string;
 }
 
-interface TicketsByStatus {
+export interface TicketsByStatus {
   [status: string]: TransformedTicket[];
 }
 
@@ -41,17 +42,18 @@ export class TicketService {
 
   constructor(
     @Inject('mongodb') private readonly databaseService: DatabaseService,
+    @Inject('s3') private readonly storageService: StorageService,
     private readonly stateMachine: StateMachineService,
-  ) { }
+  ) {}
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
     const mapTechniciansAndDispatchers = async (ticket) => {
       const technicians = await Promise.all(
-        ticket.technicians?.map((tech) => this.getEmployeeById(tech?.id)),
+        ticket?.technicians?.map((tech) => this.getEmployeeById(tech?.id)),
       );
       const dispatchers = await Promise.all(
-        ticket.dispatchers?.map((disp) => this.getEmployeeById(disp?.id)),
+        ticket?.dispatchers?.map((disp) => this.getEmployeeById(disp?.id)),
       );
       return {
         ...ticket,
@@ -119,8 +121,12 @@ export class TicketService {
     if (!ticket) {
       throw new NotFoundException('Ticket not found');
     }
-    await this.databaseService.delete(id, this.collectionName);
-
+    const updateTicketDto: UpdateTicketDto = {
+      deleted: true,
+      currentState: { id: 'deleted', name: 'deleted' },
+      updatedAt: '',
+    };
+    await this.update(id, updateTicketDto);
     return 'Ticket deleted successfully';
   }
 
@@ -147,7 +153,12 @@ export class TicketService {
     };
   }
 
-  async updateState(ticketId: string, newState: string, newStateTicket?: NewStateTicketDto): Promise<any> {
+  async updateState(
+    ticketId: string,
+    newState: string,
+    newStateTicket?: NewStateTicketDto,
+    dispatcherId?: string,
+  ): Promise<any> {
     const ticket = await this.getTicketById(ticketId);
     if (!ticket) throw new NotFoundException('Ticket no encontrado');
 
@@ -170,14 +181,15 @@ export class TicketService {
       );
     }
 
-    if (newState === 'in_service') {
+    const blockedStates = ['in_service', 'in_route', 'check_in'];
+    if (blockedStates.includes(newState)) {
       const technicians =
         ticket.technicians?.filter((tech) => tech.enabled) || [];
       if (technicians.length === 0) {
         throw new BadRequestException('No hay técnicos asignados al ticket.');
       }
 
-      const technicianIds = technicians?.map((tech) => tech.id);
+      const technicianIds = technicians?.map((tech: any) => tech.id);
 
       const busyTickets = await this.databaseService.list(
         0,
@@ -185,8 +197,8 @@ export class TicketService {
         {
           filters: {
             'technicians.id': technicianIds,
-            'technicians.enabled': 'true',
-            'currentState.id': 'in_service',
+            'technicians.enabled': true,
+            'currentState.id': blockedStates,
           },
           exclude: {
             id: ticketId,
@@ -196,17 +208,23 @@ export class TicketService {
       );
 
       if (Array.isArray(busyTickets) && busyTickets.length > 0) {
-        throw new ForbiddenException(
-          'El técnico asignado ya está atendiendo otro ticket.',
+        throw new BadRequestException(
+          `El técnico asignado ya está atendiendo otro ticket ${busyTickets[0].ticket_number} estado ${busyTickets[0].currentState.label}`,
         );
       }
     }
     const updatedAt = new Date().toISOString();
     if (newState === 'coordinate') {
       if (newStateTicket) {
-        if (!newStateTicket?.customs?.coordinatedDate) throw new NotFoundException('Para coordinar debes enviar una fecha de coordinación.');
+        if (!newStateTicket?.customs?.coordinatedDate)
+          throw new NotFoundException(
+            'Para coordinar debes enviar una fecha de coordinación.',
+          );
         ticket.coordinatedDate = newStateTicket.customs.coordinatedDate;
-        const contact = await this.databaseService.get(newStateTicket?.customs?.coordinatedContactId, 'contacts')
+        const contact = await this.databaseService.get(
+          newStateTicket?.customs?.coordinatedContactId,
+          'contacts',
+        );
         if (!contact) throw new NotFoundException('Contacto no encontrado');
         ticket.coordinatedContactId = contact.id;
         await this.updateTicketField(ticketId, {
@@ -216,7 +234,6 @@ export class TicketService {
       }
     }
 
-    
     await this.updateTicketField(ticketId, {
       currentState: { id: targetState?.id, label: targetState?.label },
       updatedAt,
@@ -228,8 +245,13 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
+      null,
       ticket.technicians,
-      { coordinatedDate: ticket?.coordinatedDate, coordinatedContactId: ticket?.coordinatedContactId }
+      {
+        coordinatedDate: ticket?.coordinatedDate,
+        coordinatedContactId: ticket?.coordinatedContactId,
+        clientId: ticket.clientId,
+      },
     );
 
     return `Estado actualizado a ${targetState?.label} con éxito para el ticket ${ticket.ticket_number}`;
@@ -290,10 +312,10 @@ export class TicketService {
         acc.branchesId?.push(ticket.branchId);
         acc.contactsId?.push(...ticket.contactsId);
         acc.disptachersId?.push(
-          ...ticket.dispatchers?.map((disptacher) => disptacher.id),
+          ...ticket?.dispatchers?.map((disptacher) => disptacher.id),
         );
         acc.techniciansId?.push(
-          ...ticket.technicians?.map((technician) => technician.id),
+          ...ticket?.technicians?.map((technician) => technician.id),
         );
         return acc;
       },
@@ -311,8 +333,7 @@ export class TicketService {
   }
 
   async update(id: string, ticket: UpdateTicketDto) {
-    const updatedAt = new Date().toISOString();
-    ticket['updatedAt'] = updatedAt;
+    ticket['updatedAt'] = new Date().toISOString();
     return (
       (await this.databaseService.update(id, ticket, this.collectionName)) &&
       'Update successful'
@@ -453,8 +474,28 @@ export class TicketService {
         { filters: { ticketId: ticketsId }, sort: { endDate: 'desc' } },
         'appointments',
       ),
-      this.databaseService.get('attentionType', 'datas'),
-      this.databaseService.get('priority', 'datas'),
+      this.databaseService.list(
+        0,
+        1,
+        {
+          filters: {
+            id: 'attentionType',
+            commerceId: commercesId,
+          },
+        },
+        'datas',
+      ),
+      this.databaseService.list(
+        0,
+        1,
+        {
+          filters: {
+            id: 'priority',
+            commerceId: commercesId,
+          },
+        },
+        'datas',
+      ),
     ]);
     const records = [];
     for (const ticket of tickets) {
@@ -488,14 +529,20 @@ export class TicketService {
         elements.category,
         elements.subcategory,
         elements.appointments,
-        attentionType,
-        priority,
+        attentionType?.[0],
+        priority?.[0],
       );
 
       records.push(ticketResult);
     }
 
-    return records;
+    const fieldToSortBy = 'dateSla';
+    const isAscending = true;
+
+    return records.sort((a, b) => {
+      const result = a.ticket[fieldToSortBy] - b.ticket[fieldToSortBy];
+      return isAscending ? result : -result;
+    });
   }
 
   getOwnTicketElements(
@@ -531,13 +578,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-        ticket.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-      )
+          ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+        )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-        ticket.technicians?.map((t) => t.id)?.includes(technician.id),
-      )
+          ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
+        )
       : [];
 
     const statesHistory = statesHistoryList
@@ -546,6 +593,16 @@ export class TicketService {
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
+      
+      statesHistoryList = statesHistoryList.map(sh=> {
+        if(sh.stateId === 'reschedule' && sh.custom?.fileName && sh.custom?.filePath){
+          return {
+            ...sh,
+            url: this.storageService.getFileUrl(sh.custom.fileName, sh.custom.filePath)
+          }
+        }
+        return sh;
+      });
 
     const comments = commentsList?.filter(
       (comment) => comment.ticketId === ticket.id,
@@ -579,6 +636,8 @@ export class TicketService {
 
   mapSuperTicket(
     ticket: {
+      ticketDetails: any;
+      location: any;
       id: any;
       ticket_number: any;
       description: any;
@@ -596,6 +655,7 @@ export class TicketService {
       currentState: any;
       technicians: any[];
       dispatchers: any[];
+      ticketOriginalJson: any;
     },
     commerce: {
       id: any;
@@ -649,7 +709,7 @@ export class TicketService {
 
     const allEmployees = [...dispatchers, ...technicians];
 
-    const comments = Utils.mapRecord(Comment, _comments);
+    const comments = Utils.mapRecord(CreateCommentDto, _comments);
 
     const commentsWithEmployeeNames = comments?.map((comment) => {
       const employee = allEmployees?.find(
@@ -675,6 +735,7 @@ export class TicketService {
         sla: ticket?.sla,
         numSla: ticket?.numSla,
         dateSla: ticket?.dateSla,
+        location: ticket?.location,
         attentionType: attentionType?.values?.find(
           (_attentionType) => _attentionType.value === ticket?.attentionType,
         ),
@@ -685,6 +746,7 @@ export class TicketService {
           (_priority) => _priority.value === ticket?.priority,
         ),
         currentState: ticket?.currentState,
+        clientTicket: ticket.ticketDetails,
       },
       commerce: {
         id: commerce?.id,
@@ -736,7 +798,7 @@ export class TicketService {
           email: disptacher?.email,
         };
       }),
-      technicians: ticket.technicians?.map((technician) => {
+      technicians: ticket?.technicians?.map((technician) => {
         const technicianInfo = technicians?.find(
           (tech) => tech?.id === technician?.id,
         );
@@ -829,7 +891,7 @@ export class TicketService {
     tickets?.forEach((ticket) => {
       const technicians = ticket.technicians;
       technicians?.forEach((technician) => {
-        uniqueTechniciansMap?.set(technician.id,  {
+        uniqueTechniciansMap?.set(technician.id, {
           id: technician.id,
           fullName: technician.fullName,
           provider: technician.provider,
@@ -877,15 +939,13 @@ export class TicketService {
       pendingPercentage: rateOpen,
     };
 
-    const summary = {
+    return {
       totalTickets,
       ticketsByStatus,
       ticketStatuses,
       closedVsPending,
       filters: filtersSummary,
     };
-
-    return summary;
   }
 
   transformTicketsByStatus(tickets: any[]): TicketsByStatus {
@@ -906,12 +966,12 @@ export class TicketService {
       };
 
       if (ticket.ticket.currentState.id === 'coordinate') {
-        if(!transformedTicket.coordinatedAt){
+        if (!transformedTicket.coordinatedAt) {
           transformedTicket.coordinatedAt = ticket.appointments?.[0]?.endDate;
         }
-        const coordinatedAt = transformedTicket.coordinatedAt ? new Date(
-          transformedTicket.coordinatedAt,
-        ).toISOString() : null;
+        const coordinatedAt = transformedTicket.coordinatedAt
+          ? new Date(transformedTicket.coordinatedAt).toISOString()
+          : null;
         const date1 = dayjs(coordinatedAt);
         const date2 = dayjs(now);
         if (date1.isAfter(date2)) {
@@ -950,6 +1010,7 @@ export class TicketService {
     const currentlyAssignedTechnician = ticket.technicians?.find(
       (tech) => tech.id === technicianId && tech.enabled,
     );
+
     if (currentlyAssignedTechnician) {
       return `El técnico ${technician.firstName} ${technician.firstSurname} ya está asignado al ticket ${ticket.ticket_number}.`;
     }
@@ -986,7 +1047,7 @@ export class TicketService {
     const updatedAt = new Date().toISOString();
 
     const updatedTechnicians = [
-      ...ticket.technicians?.map((tech) => {
+      ...ticket?.technicians?.map((tech) => {
         if (tech.enabled) {
           return {
             ...tech,
@@ -1021,7 +1082,9 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
+      dispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId },
     );
 
     return `El técnico ${technician.firstName} ${technician.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el dispatchers ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
@@ -1090,7 +1153,7 @@ export class TicketService {
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedTechnicians = ticket.technicians?.map((tech) => {
+    const updatedTechnicians = ticket?.technicians?.map((tech) => {
       if (tech.id === technicianId && tech.enabled) {
         return {
           ...tech,
@@ -1114,7 +1177,9 @@ export class TicketService {
       ticket.currentState,
       targetState,
       ticket.dispatchers,
+      dispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId },
     );
 
     return `El técnico ${technicianToUnassign.name} ha sido desasignado exitosamente del ticket ${ticket.ticket_number} por el dispatchers ${dispatcher.firstName} ${dispatcher.firstSurname}.`;
@@ -1186,7 +1251,7 @@ export class TicketService {
     const updatedAt = new Date().toISOString();
 
     const updatedDispatchers = [
-      ...ticket.dispatchers?.map((dispatcher) => {
+      ...ticket?.dispatchers?.map((dispatcher) => {
         if (dispatcher.enabled) {
           return {
             ...dispatcher,
@@ -1209,7 +1274,7 @@ export class TicketService {
       },
     ];
 
-    const updatedTechnicians = ticket.technicians?.map((tech) => {
+    const updatedTechnicians = ticket?.technicians?.map((tech) => {
       if (tech.enabled) {
         return {
           ...tech,
@@ -1234,7 +1299,9 @@ export class TicketService {
       ticket.currentState,
       targetState,
       updatedDispatchers,
+      currentDispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId },
     );
 
     const targetStateTechnicianUnassigned = stateMachine?.states?.find(
@@ -1246,7 +1313,9 @@ export class TicketService {
       ticket.currentState,
       targetStateTechnicianUnassigned,
       updatedDispatchers,
+      currentDispatcher,
       updatedTechnicians,
+      { clientId: ticket.clientId },
     );
 
     return `El dispatcher ${newDispatcher.firstName} ${newDispatcher.firstSurname} ha sido asignado exitosamente al ticket ${ticket.ticket_number} por el dispatcher ${currentDispatcher.firstName} ${currentDispatcher.firstSurname}. Todos los técnicos asignados previamente han sido desasignados.`;
@@ -1267,7 +1336,7 @@ export class TicketService {
 
     const unassignedAt = new Date().toISOString();
 
-    const updatedDispatchers = ticket.dispatchers?.map((dispatcher) => {
+    const updatedDispatchers = ticket?.dispatchers?.map((dispatcher) => {
       if (dispatcher.id === dispatcherId && dispatcher.enabled) {
         return {
           ...dispatcher,
@@ -1293,6 +1362,122 @@ export class TicketService {
     return `Dispatcher ${dispatcherId} successfully unassigned from ticket ${ticketId}.`;
   }
 
+  async getStatsByTechnician(
+    technicianId: string,
+    commerceId: string,
+    dateRange?: 'today' | 'week' | 'month',
+  ) {
+    const commercesId = JSON.parse(commerceId);
+    const queryParams: QueryParams = {
+      filters: {
+        'technicians.id': technicianId,
+        'technicians.enabled': true,
+        ...(commercesId.length < 0 && commercesId),
+      },
+      fields: ['attentionType', 'currentState', 'commerceId', 'createdAt'],
+      sort: { createdAt: 'desc' },
+    };
+
+    if (dateRange) {
+      const now = new Date();
+
+      const fromDates: Record<string, Date> = {
+        today: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+        week: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        month: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+      };
+
+      const fromDate = fromDates[dateRange];
+
+      queryParams.filters.createdAt = {
+        from: fromDate.toISOString(),
+        to: now.toISOString(),
+      };
+    }
+
+    const tickets: any = await this.databaseService.list(
+      0,
+      999999,
+      queryParams,
+      this.collectionName,
+    );
+
+    const attentionTypesList = await this.databaseService.list(
+      0,
+      999999,
+      {
+        filters: {
+          id: 'attentionType',
+          commerceId: commercesId[0],
+        },
+      },
+      'datas',
+    );
+
+    let totalClosed = 0;
+    let totalPending = 0;
+
+    const ticketsCountByType: Record<string, Record<string, number>> = {};
+
+    // First, pre-populate all commerce stats with all attention types set to 0
+    if (Array.isArray(attentionTypesList)) {
+      for (const att of attentionTypesList) {
+        const commerce = await this.databaseService.get(
+          att.customerDni,
+          'commerces',
+          'id',
+        );
+        if (commerce?.name && Array.isArray(att.values)) {
+          ticketsCountByType[commerce.name] = {};
+          att.values.forEach((val) => {
+            if (val?.name) {
+              ticketsCountByType[commerce.name][val.name] = 0;
+            }
+          });
+        }
+      }
+    }
+
+    // Then count the actual tickets
+    for (const ticket of Utils.mapRecord(TicketEntity, tickets)) {
+      const commerce = await this.databaseService.get(
+        ticket.commerceId,
+        'commerces',
+        'id',
+      );
+      const currentStateId = ticket?.currentState?.id;
+
+      if (currentStateId === 'closed') {
+        totalClosed++;
+      } else {
+        totalPending++;
+      }
+
+      const attentionTypeObject = Array.isArray(attentionTypesList)
+        ? attentionTypesList.find(
+            (att) => att.customerDni === ticket.commerceId,
+          )
+        : null;
+
+      if (attentionTypeObject?.values?.length) {
+        const attentionType = attentionTypeObject.values.find(
+          (val) => val.value == ticket?.attentionType,
+        );
+        if (attentionType?.name && commerce?.name) {
+          ticketsCountByType[commerce.name][attentionType.name]++;
+        }
+      }
+    }
+
+    // Replace ticketsCountByType with ticketsCountByType in the return object
+    return {
+      technicianId,
+      ticketsCountByType,
+      totalClosed,
+      totalPending,
+    };
+  }
+
   private async getEmployeeById(employeeId: string) {
     return await this.databaseService.get(employeeId, this.employeesCollection);
   }
@@ -1301,7 +1486,6 @@ export class TicketService {
     ticketId: string,
     fields: Partial<UpdateTicketDto>,
   ) {
-
     return await this.databaseService.update(
       ticketId,
       fields,
@@ -1311,5 +1495,108 @@ export class TicketService {
 
   private async getTicketById(ticketId: string) {
     return await this.databaseService.get(ticketId, this.collectionName);
+  }
+
+  async filtersMode(mode: string) {
+    const pipeline = [
+      {
+        $group: {
+          _id: {
+            commerceId: '$commerceId',
+            attentionType: '$attentionType',
+            currentState: '$currentState',
+            region: '$location.region',
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            commerceId: '$_id.commerceId',
+            attentionType: '$_id.attentionType',
+            currentState: '$_id.currentState',
+          },
+          regions: {
+            $push: {
+              region: '$_id.region',
+              count: '$count',
+            },
+          },
+          count: { $sum: '$count' },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            commerceId: '$_id.commerceId',
+            attentionType: '$_id.attentionType',
+          },
+          states: {
+            $push: {
+              currentState: '$_id.currentState',
+              count: '$count',
+              regions: '$regions',
+            },
+          },
+          count: { $sum: '$count' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'datas',
+          let: {
+            cid: '$_id.commerceId',
+            attValue: '$_id.attentionType',
+          },
+          pipeline: [
+            { $match: { id: 'attentionType' } },
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$commerceId', '$$cid'],
+                },
+              },
+            },
+            { $unwind: '$values' },
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$values.value', '$$attValue'],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                label: '$values.name',
+              },
+            },
+          ],
+          as: 'typeInfo',
+        },
+      },
+      {
+        $unwind: {
+          path: '$typeInfo',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          commerceId: '$_id.commerceId',
+          attentionType: {
+            value: '$_id.attentionType',
+            label: '$typeInfo.label',
+          },
+          count: 1,
+          states: 1,
+        },
+      },
+    ];
+
+    const data = this.databaseService.aggregate(pipeline, this.collectionName);
+    return data;
   }
 }

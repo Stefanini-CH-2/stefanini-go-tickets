@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsArray, IsOptional, ValidateNested, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  IsOptional,
+  ValidateNested,
+  IsEnum,
+} from 'class-validator';
 import { Exclude, Type } from 'class-transformer';
 
 enum Role {

@@ -4,9 +4,9 @@ import { DeviceController } from './device.controller';
 import { DatabaseModule } from 'stefaninigo';
 
 @Module({
-  imports:[
+  imports: [
     DatabaseModule.forRootAsync([
-        { name: 'mongodb', provider: DatabaseModule.PROVIDERS.MONGODB },
+      { name: 'mongodb', provider: DatabaseModule.PROVIDERS.MONGODB },
     ]),
   ],
   controllers: [DeviceController],

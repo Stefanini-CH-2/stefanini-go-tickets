@@ -1,10 +1,26 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, Query, Put } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  ParseIntPipe,
+  Query,
+  Put,
+} from '@nestjs/common';
 import { EvidenceService } from './evidence.service';
 import { Evidence } from './dto/create-evidence.dto';
 import { UpdateEvidenceDto } from './dto/update-evidence.dto';
 import { plainToClass } from 'class-transformer';
-import { QueryExclude, QueryFilters, QueryParams, QuerySearch, QuerySort } from 'stefaninigo';
-import { ParseJsonPipe } from 'src/pipes/json.pipe';
+import {
+  QueryExclude,
+  QueryFilters,
+  QueryParams,
+  QuerySearch,
+  QuerySort,
+} from 'stefaninigo';
+import { ParseJsonPipe } from 'src/pipes/json-pipe';
 import { Utils } from 'src/utils/utils';
 
 @Controller('evidences')
@@ -24,10 +40,8 @@ export class EvidenceController {
   async get(@Param('id') id: string) {
     try {
       const result = this.evidenceService.get(id);
-      return plainToClass(Evidence, result)
-    } catch (error) {
-      
-    }
+      return plainToClass(Evidence, result);
+    } catch (error) {}
   }
 
   @Get()
@@ -42,30 +56,32 @@ export class EvidenceController {
     @Query('sort', new ParseJsonPipe<QuerySort>(QuerySort)) sort: QuerySort,
     @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
     search: QuerySearch,
-) {
+  ) {
     try {
-        const queryParams: QueryParams = {
-            filters,
-            search,
-            exclude,
-            fields,
-            sort,
-        };
-        const response = await this.evidenceService.list(
-            start,
-            limit,
-            queryParams,
-        );
-        response.records = Utils.mapRecord(Evidence, response.records);
-        return response;
+      const queryParams: QueryParams = {
+        filters,
+        search,
+        exclude,
+        fields,
+        sort,
+      };
+      const response = await this.evidenceService.list(
+        start,
+        limit,
+        queryParams,
+      );
+      response.records = Utils.mapRecord(Evidence, response.records);
+      return response;
     } catch (error) {
-        return error.message;
+      return error.message;
     }
-}
-
+  }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateEvidenceDto: UpdateEvidenceDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateEvidenceDto: UpdateEvidenceDto,
+  ) {
     try {
       return this.evidenceService.update(id, updateEvidenceDto);
     } catch (error) {
