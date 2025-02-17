@@ -10,6 +10,8 @@ import { HttpModule } from '@nestjs/axios';
   imports: [
     DatabaseModule.forRootAsync([
       { name: 'mongodb', provider: DatabaseModule.PROVIDERS.MONGODB },
+    ]),
+    StorageModule.forRootAsync([
       { name: 's3', provider: StorageModule.PROVIDERS.S3 },
     ]),
     HttpModule,
