@@ -44,7 +44,7 @@ export class TicketService {
     @Inject('mongodb') private readonly databaseService: DatabaseService,
     @Inject('s3') private readonly storageService: StorageService,
     private readonly stateMachine: StateMachineService,
-  ) {}
+  ) { }
 
   async create(tickets: Ticket | Ticket[]) {
     const createdAt = new Date().toISOString();
@@ -578,13 +578,13 @@ export class TicketService {
     );
     const dispatchers = Array.isArray(ticket.dispatchers)
       ? disptachersList?.filter((disptacher) =>
-          ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
-        )
+        ticket?.dispatchers?.map((c) => c.id)?.includes(disptacher.id),
+      )
       : [];
     const technicians = Array.isArray(ticket.technicians)
       ? techniciansList?.filter((technician) =>
-          ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
-        )
+        ticket?.technicians?.map((t) => t.id)?.includes(technician.id),
+      )
       : [];
 
     const statesHistory = statesHistoryList
@@ -593,16 +593,16 @@ export class TicketService {
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
-      
-      statesHistoryList = statesHistoryList.map(sh=> {
-        if(sh.stateId === 'reschedule' && sh.custom?.fileName && sh.custom?.filePath){
-          return {
-            ...sh,
-            url: this.storageService.getFileUrl(sh.custom.fileName, sh.custom.filePath)
-          }
+
+    statesHistoryList = statesHistoryList.map(sh => {
+      if (sh.stateId === 'reschedule' && sh.custom?.fileName && sh.custom?.filePath) {
+        return {
+          ...sh,
+          url: this.storageService.getFileUrl(sh.custom.fileName, sh.custom.filePath)
         }
-        return sh;
-      });
+      }
+      return sh;
+    });
 
     const comments = commentsList?.filter(
       (comment) => comment.ticketId === ticket.id,
@@ -1455,8 +1455,8 @@ export class TicketService {
 
       const attentionTypeObject = Array.isArray(attentionTypesList)
         ? attentionTypesList.find(
-            (att) => att.customerDni === ticket.commerceId,
-          )
+          (att) => att.customerDni === ticket.commerceId,
+        )
         : null;
 
       if (attentionTypeObject?.values?.length) {
@@ -1497,8 +1497,18 @@ export class TicketService {
     return await this.databaseService.get(ticketId, this.collectionName);
   }
 
-  async filtersMode(mode: string) {
-    const pipeline = [
+  async filtersMode(mode: string, commercesId: string[]) {
+    const pipeline: any[] = [];
+
+    if (commercesId && commercesId.length > 0) {
+      pipeline.push({
+        $match: {
+          commerceId: { $in: commercesId },
+        },
+      });
+    }
+
+    pipeline.push(
       {
         $group: {
           _id: {
@@ -1593,10 +1603,11 @@ export class TicketService {
           count: 1,
           states: 1,
         },
-      },
-    ];
+      }
+    );
 
     const data = this.databaseService.aggregate(pipeline, this.collectionName);
     return data;
   }
+
 }
