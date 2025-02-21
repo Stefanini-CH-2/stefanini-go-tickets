@@ -7,6 +7,7 @@ export class UpdateTicketDto extends PartialType(Ticket) {
   coordinatedDate?: string;
 
   @IsString()
+  @IsOptional()
   coordinatedContactId?: string;
 
   @IsString()
