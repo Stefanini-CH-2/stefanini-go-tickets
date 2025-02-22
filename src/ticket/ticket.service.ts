@@ -228,7 +228,7 @@ export class TicketService {
             'contacts',
           );
         }
-        ticket.coordinatedContactId = contact.id ?? newStateTicket?.customs?.coordinatedContactId;
+        ticket.coordinatedContactId = contact?.id ?? newStateTicket?.customs?.coordinatedContactId;
         await this.updateTicketField(ticketId, {
           coordinatedContactId: ticket?.coordinatedContactId,
           coordinatedDate: ticket?.coordinatedDate,
