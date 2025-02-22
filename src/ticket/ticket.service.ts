@@ -221,12 +221,14 @@ export class TicketService {
             'Para coordinar debes enviar una fecha de coordinación.',
           );
         ticket.coordinatedDate = newStateTicket.customs.coordinatedDate;
-        const contact = await this.databaseService.get(
-          newStateTicket?.customs?.coordinatedContactId,
-          'contacts',
-        );
-        if (!contact) throw new NotFoundException('Contacto no encontrado');
-        ticket.coordinatedContactId = contact.id;
+        let contact;
+        if (newStateTicket?.customs?.coordinatedContactId) {
+          contact = await this.databaseService.get(
+            newStateTicket?.customs?.coordinatedContactId,
+            'contacts',
+          );
+        }
+        ticket.coordinatedContactId = contact.id ?? newStateTicket?.customs?.coordinatedContactId;
         await this.updateTicketField(ticketId, {
           coordinatedContactId: ticket?.coordinatedContactId,
           coordinatedDate: ticket?.coordinatedDate,
