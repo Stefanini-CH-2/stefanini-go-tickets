@@ -54,6 +54,9 @@ export class Device {
   @IsOptional()
   type: string;
 
+  @IsOptional()
+  commerceId: string[];
+
   @Exclude()
   _id: string;
 }
