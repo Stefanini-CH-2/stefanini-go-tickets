@@ -638,6 +638,7 @@ export class TicketService {
 
   mapSuperTicket(
     ticket: {
+      createdDate: any;
       ticketDetails: any;
       location: any;
       id: any;
@@ -731,6 +732,7 @@ export class TicketService {
         description: ticket?.description,
         createAt: ticket?.createAt,
         updateAt: ticket?.updateAt,
+        createdDate: ticket?.createdDate,
         plannedDate: ticket?.plannedDate,
         coordinatedDate: ticket?.coordinatedDate,
         coordinatedContactId: ticket?.coordinatedContactId,
