@@ -124,14 +124,18 @@ export class StateMachineService {
     };
 
     if (toState.id === 'reschedule') {
-      const baseUrl = `${this.configService.get<string>('ods.endpoint')}`;
-      const url = `${baseUrl}/orders/${ticketId}/commerce/${commerceId}/url`;
-      const getOdsUrl = await this.httpService.axiosRef.get(url);
-      stateHistory.customs.ods = {
-        fileName: getOdsUrl.data?.fileName,
-        fielPath: getOdsUrl.data?.filePath,
-        url: getOdsUrl.data?.url
-      };
+      try{
+        const baseUrl = `${this.configService.get<string>('ods.endpoint')}`;
+        const url = `${baseUrl}/orders/${ticketId}/commerce/${commerceId}/url`;
+        const getOdsUrl = await this.httpService.axiosRef.get(url);
+        stateHistory.customs.ods = {
+          fileName: getOdsUrl.data?.fileName,
+          fielPath: getOdsUrl.data?.filePath,
+          url: getOdsUrl.data?.url
+        };
+      } catch (ex) {
+        console.error(ex);
+      }
     }
 
     await this.stateHistory.create(stateHistory, commerceId);
