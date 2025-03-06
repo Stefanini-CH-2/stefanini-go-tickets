@@ -279,34 +279,57 @@ export class TicketService {
   }
 
   mapFieldsIds(tickets) {
-    return tickets?.reduce(
-      (acc, ticket) => {
-        acc.ticketsId?.push(ticket.id);
-        acc.categoriesId?.push(ticket.categoryId);
-        acc.subcategoriesId?.push(ticket.subcategoryId);
-        acc.commercesId?.push(ticket.commerceId);
-        acc.branchesId?.push(ticket.branchId);
-        acc.contactsId?.push(...ticket.contactsId);
-        acc.disptachersId?.push(
-          ...ticket.dispatchers?.map((disptacher) => disptacher.id),
-        );
-        acc.techniciansId?.push(
-          ...ticket.technicians?.map((technician) => technician.id),
-        );
-        return acc;
-      },
-      {
-        ticketsId: [],
-        categoriesId: [],
-        subcategoriesId: [],
-        commercesId: [],
-        branchesId: [],
-        contactsId: [],
-        disptachersId: [],
-        techniciansId: [],
-      },
-    );
-  }
+    return tickets?.reduce((acc, ticket) => {
+      // Verifica y agrega sólo si el valor no existe en el array.
+      if (!acc.ticketsId.includes(ticket.id)) {
+        acc.ticketsId.push(ticket.id);
+      }
+      if (!acc.categoriesId.includes(ticket.categoryId)) {
+        acc.categoriesId.push(ticket.categoryId);
+      }
+      if (!acc.subcategoriesId.includes(ticket.subcategoryId)) {
+        acc.subcategoriesId.push(ticket.subcategoryId);
+      }
+      if (!acc.commercesId.includes(ticket.commerceId)) {
+        acc.commercesId.push(ticket.commerceId);
+      }
+      if (!acc.branchesId.includes(ticket.branchId)) {
+        acc.branchesId.push(ticket.branchId);
+      }
+      
+      // Para cada contacto, se verifica la existencia antes de agregar.
+      ticket.contactsId.forEach(contactId => {
+        if (!acc.contactsId.includes(contactId)) {
+          acc.contactsId.push(contactId);
+        }
+      });
+      
+      // Para cada dispatcher, se verifica la existencia antes de agregar su id.
+      ticket.dispatchers?.forEach(dispatcher => {
+        if (!acc.disptachersId.includes(dispatcher.id)) {
+          acc.disptachersId.push(dispatcher.id);
+        }
+      });
+      
+      // Para cada technician, se verifica la existencia antes de agregar su id.
+      ticket.technicians?.forEach(technician => {
+        if (!acc.techniciansId.includes(technician.id)) {
+          acc.techniciansId.push(technician.id);
+        }
+      });
+      
+      return acc;
+    }, {
+      ticketsId: [],
+      categoriesId: [],
+      subcategoriesId: [],
+      commercesId: [],
+      branchesId: [],
+      contactsId: [],
+      disptachersId: [],
+      techniciansId: [],
+    });
+  }  
 
   async update(id: string, ticket: UpdateTicketDto) {
     const updatedAt = new Date().toISOString();
@@ -388,13 +411,13 @@ export class TicketService {
       this.databaseService.list(
         0,
         LIMIT,
-        { filters: { id: branchesId } },
+        { filters: { id: branchesId, commerceId: commercesId } },
         'branches',
       ),
       this.databaseService.list(
         0,
         LIMIT,
-        { filters: { id: categoriesId } },
+        { filters: { id: categoriesId, commerceId: commercesId } },
         'categories',
       ),
       this.databaseService.list(
@@ -406,13 +429,13 @@ export class TicketService {
       this.databaseService.list(
         0,
         LIMIT,
-        { filters: { id: contactsId } },
+        { filters: { id: contactsId, commerceId: commercesId } },
         'contacts',
       ),
       this.databaseService.list(
         0,
         LIMIT,
-        { filters: { id: disptachersId } },
+        { filters: { id: disptachersId, commerceId: commercesId } },
         'employees',
       ),
       this.databaseService.list(
@@ -424,7 +447,7 @@ export class TicketService {
       this.databaseService.list(
         0,
         LIMIT,
-        { filters: { ticketId: ticketsId } },
+        { filters: { ticketId: ticketsId, commerceId: commercesId } },
         'states_history',
       ),
       this.databaseService.list(
@@ -783,7 +806,7 @@ export class TicketService {
       filters['technicians.id'] = techniciansId;
     }
 
-    let { records: tickets } = await this.listFlows(0, 1000000, {
+    let { records: tickets } = await this.listFlows(0, 100, {
       filters: filters,
       sort: { createdAt: 'desc' },
       search: { ticket_number: ticketNumber },
