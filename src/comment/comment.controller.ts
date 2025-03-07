@@ -1,10 +1,26 @@
-import { Controller, Get, Post, Body, Param, Delete, ParseIntPipe, Query, Put } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  ParseIntPipe,
+  Query,
+  Put,
+} from '@nestjs/common';
 import { CommentService } from './comment.service';
-import { Comment } from './dto/create-comment.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { plainToClass } from 'class-transformer';
-import { ParseJsonPipe } from 'src/pipes/json.pipe';
-import { QueryExclude, QueryFilters, QueryParams, QuerySearch, QuerySort } from 'stefaninigo';
+import { ParseJsonPipe } from 'src/pipes/json-pipe';
+import {
+  QueryExclude,
+  QueryFilters,
+  QueryParams,
+  QuerySearch,
+  QuerySort,
+} from 'stefaninigo';
 import { Utils } from 'src/utils/utils';
 
 @Controller('comments')
@@ -12,7 +28,7 @@ export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
   @Post()
-  async create(@Body() comment: Comment) {
+  async create(@Body() comment: CreateCommentDto) {
     try {
       return this.commentService.create(comment);
     } catch (error) {
@@ -24,10 +40,8 @@ export class CommentController {
   async get(@Param('id') id: string) {
     try {
       const result = this.commentService.get(id);
-      return plainToClass(Comment, result)
-    } catch (error) {
-      
-    }
+      return plainToClass(CreateCommentDto, result);
+    } catch (error) {}
   }
 
   @Get()
@@ -42,27 +56,26 @@ export class CommentController {
     @Query('sort', new ParseJsonPipe<QuerySort>(QuerySort)) sort: QuerySort,
     @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
     search: QuerySearch,
-) {
+  ) {
     try {
-        const queryParams: QueryParams = {
-            filters,
-            exclude,
-            fields,
-            sort,
-            search
-        };
-        const response = await this.commentService.list(
-            start,
-            limit,
-            queryParams,
-        );
-        response.records = Utils.mapRecord(Comment, response.records);
-        return response;
+      const queryParams: QueryParams = {
+        filters,
+        exclude,
+        fields,
+        sort,
+        search,
+      };
+      const response = await this.commentService.list(
+        start,
+        limit,
+        queryParams,
+      );
+      response.records = Utils.mapRecord(CreateCommentDto, response.records);
+      return response;
     } catch (error) {
-        return error.message;
+      return error.message;
     }
-}
-
+  }
 
   @Put(':id')
   update(@Param('id') id: string, @Body() updateCommentDto: UpdateCommentDto) {

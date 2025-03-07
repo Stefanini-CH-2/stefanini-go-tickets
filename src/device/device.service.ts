@@ -30,18 +30,21 @@ export class DeviceService {
       const deviceWithIds = devices.map((device) => ({
         id: uuidv4().toString(),
         ...device,
-        createdAt
-      }))
+        createdAt,
+      }));
       await this.databaseService.create(deviceWithIds, this.collectionName);
       return deviceWithIds.map((device) => device.id);
     } else {
-      const id = uuidv4().toString()
-      await this.databaseService.create({
-        id,
-        ...devices,
-        createdAt
-      }, this.collectionName)
-      return [id]
+      const id = uuidv4().toString();
+      await this.databaseService.create(
+        {
+          id,
+          ...devices,
+          createdAt,
+        },
+        this.collectionName,
+      );
+      return [id];
     }
   }
 
@@ -67,8 +70,16 @@ export class DeviceService {
     page = page <= 0 ? 1 : page;
     const start = (page - 1) * limit;
     queryParams.filters = setCommerceId(queryParams.filters);
-    const total = await this.databaseService.count(queryParams, this.collectionName);
-    const records = await this.databaseService.list(start, limit, queryParams, this.collectionName);
+    const total = await this.databaseService.count(
+      queryParams,
+      this.collectionName,
+    );
+    const records = await this.databaseService.list(
+      start,
+      limit,
+      queryParams,
+      this.collectionName,
+    );
 
     return {
       total,
@@ -80,10 +91,10 @@ export class DeviceService {
 
   async update(id: string, device: UpdateDeviceDto) {
     const updatedAt = new Date().toISOString();
-    device["updatedAt"] = updatedAt;
+    device['updatedAt'] = updatedAt;
     return (
-      (await this.databaseService.update(id, device, this.collectionName)) && 'Update successful'
+      (await this.databaseService.update(id, device, this.collectionName)) &&
+      'Update successful'
     );
   }
 }
-

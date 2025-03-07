@@ -20,7 +20,7 @@ import {
   QuerySearch,
   QuerySort,
 } from 'stefaninigo';
-import { ParseJsonPipe } from 'src/pipes/json.pipe';
+import { ParseJsonPipe } from 'src/pipes/json-pipe';
 import { Utils } from 'src/utils/utils';
 import { NewStateTicketDto } from './dto/newstate-ticket.dto';
 
@@ -39,11 +39,10 @@ const setCommerceId = (filters, returnnRaw: boolean = false) => {
 
 @Controller('tickets')
 export class TicketController {
-  constructor(private readonly ticketService: TicketService) { }
+  constructor(private readonly ticketService: TicketService) {}
 
   @Post()
   async create(@Body() tickets: Ticket) {
-
     return this.ticketService.create(tickets);
   }
 
@@ -51,9 +50,13 @@ export class TicketController {
   async updateState(
     @Param('id') id: string,
     @Param('newState') newState: string,
-    @Body() newStateBody?: NewStateTicketDto
+    @Body() newStateBody?: NewStateTicketDto,
   ) {
-    const result = await this.ticketService.updateState(id, newState, newStateBody);
+    const result = await this.ticketService.updateState(
+      id,
+      newState,
+      newStateBody,
+    );
     return result;
   }
 
@@ -108,7 +111,7 @@ export class TicketController {
       exclude,
       fields,
       sort,
-      search
+      search,
     };
     const response = await this.ticketService.list(start, limit, queryParams);
     response.records = Utils.mapRecord(Ticket, response.records);
@@ -154,33 +157,68 @@ export class TicketController {
     return await this.ticketService.listFlows(start, limit, queryParams);
   }
 
+  @Get('technicians/:technicianId/stats')
+  async getStatsByTechnician(
+    @Param('technicianId') technicianId: string,
+    @Query('dateRange') dateRange?: 'today' | 'week' | 'month',
+    @Query('commerceId') commerceId?: string,
+  ) {
+    const result = await this.ticketService.getStatsByTechnician(
+      technicianId,
+      commerceId,
+      dateRange,
+    );
+    return result;
+  }
+
   @Post(':id/technicians')
   async assignTechnician(@Param('id') id: string, @Body() body: any) {
     const { technicianId, dispatcherId } = body;
-    const result = await this.ticketService.assignTechnician(id, technicianId, dispatcherId);
+    const result = await this.ticketService.assignTechnician(
+      id,
+      technicianId,
+      dispatcherId,
+    );
     return result;
-
   }
 
   @Delete(':id/technicians')
   async unassignTechnicians(@Param('id') id: string, @Body() body: any) {
     const { technicianId, dispatcherId } = body;
-    const result = await this.ticketService.unassignTechnician(id, technicianId, dispatcherId);
+    const result = await this.ticketService.unassignTechnician(
+      id,
+      technicianId,
+      dispatcherId,
+    );
     return result;
   }
 
   @Post(':id/dispatchers')
   async assignDispatcher(@Param('id') id: string, @Body() body: any) {
     const { newDispatcherId, currentDispatcherId } = body;
-    const result = await this.ticketService.assignDispatcher(id, newDispatcherId, currentDispatcherId);
+    const result = await this.ticketService.assignDispatcher(
+      id,
+      newDispatcherId,
+      currentDispatcherId,
+    );
     return result;
   }
 
   @Delete(':id/dispatchers')
   async unassignDispatchers(@Param('id') id: string, @Body() body: any) {
     const { dispatcherId } = body;
-    const result = await this.ticketService.unassignDispatcher(id, dispatcherId);
+    const result = await this.ticketService.unassignDispatcher(
+      id,
+      dispatcherId,
+    );
     return result;
   }
-}
 
+  @Get('filters/:mode')
+  async filtersMode(
+    @Param('mode') mode: string,
+    @Query('commerceId', new ParseJsonPipe<string[]>(Array)) commercesId: string[],
+  ) {
+    return await this.ticketService.filtersMode(mode, commercesId);
+  }
+}

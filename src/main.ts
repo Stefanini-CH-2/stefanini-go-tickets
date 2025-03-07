@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './interceptor/response.interceptor';
-import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -12,6 +11,7 @@ async function bootstrap() {
     forbidNonWhitelisted: true, // Lanza un error si hay campos no permitidos
     transform: true, // Transforma los tipos de datos
   })); */
-  await app.listen(3000);
+  await app.listen(process.env.APP_PORT || 3000);
+  console.log(`Server running on port ${process.env.APP_PORT || 3000}`);
 }
 bootstrap();
