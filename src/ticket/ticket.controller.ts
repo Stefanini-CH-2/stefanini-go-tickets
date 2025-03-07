@@ -24,6 +24,19 @@ import { ParseJsonPipe } from 'src/pipes/json-pipe';
 import { Utils } from 'src/utils/utils';
 import { NewStateTicketDto } from './dto/newstate-ticket.dto';
 
+const setCommerceId = (filters, returnnRaw: boolean = false) => {
+  const commercesId = process.env.CLIENTS ? process.env.CLIENTS.split(',') : []; 
+  if(returnnRaw) {
+    return commercesId
+  }
+  if (filters) {
+    filters["commerceId"] = commercesId;
+  } else {
+    filters = { "commerceId": commercesId };
+  }
+  return filters;
+}
+
 @Controller('tickets')
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
@@ -62,6 +75,7 @@ export class TicketController {
     @Query('ticketNumber')
     ticketNumber: string,
   ) {
+    commercesId = setCommerceId(commercesId, true);
     return await this.ticketService.getSummary(
       commercesId,
       regions,
@@ -91,6 +105,7 @@ export class TicketController {
     @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
     search: QuerySearch,
   ) {
+    filters = setCommerceId(filters);
     const queryParams: QueryParams = {
       filters,
       exclude,
@@ -131,6 +146,7 @@ export class TicketController {
     @Query('search', new ParseJsonPipe<QuerySearch>(QuerySearch))
     search: QuerySearch,
   ) {
+    filters = setCommerceId(filters);
     const queryParams: QueryParams = {
       filters,
       exclude,
