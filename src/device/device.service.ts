@@ -3,6 +3,20 @@ import { Device } from './dto/create-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 import { DatabaseService, QueryParams } from 'stefaninigo';
 import { v4 as uuidv4 } from 'uuid';
+
+const setCommerceId = (filters, returnnRaw: boolean = false) => {
+  const commercesId = process.env.CLIENTS ? process.env.CLIENTS.split(',') : []; 
+  if(returnnRaw) {
+    return commercesId
+  }
+  if (filters) {
+    filters["commerceId"] = commercesId;
+  } else {
+    filters = { "commerceId": commercesId };
+  }
+  return filters;
+}
+
 @Injectable()
 export class DeviceService {
   private collectionName: string = 'devices';
@@ -52,6 +66,7 @@ export class DeviceService {
   async list(page: number, limit: number, queryParams: QueryParams) {
     page = page <= 0 ? 1 : page;
     const start = (page - 1) * limit;
+    queryParams.filters = setCommerceId(queryParams.filters);
     const total = await this.databaseService.count(queryParams, this.collectionName);
     const records = await this.databaseService.list(start, limit, queryParams, this.collectionName);
 
